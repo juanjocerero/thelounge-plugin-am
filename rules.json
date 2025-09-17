@@ -1,0 +1,9 @@
+[
+  {
+    "server": "irc.libera.chat",
+    "listen_channel": "#thelounge-test",
+    "trigger_text": "!test",
+    "response_message": "Test message received. The bot is answering.",
+    "response_channel": ""
+  }
+]

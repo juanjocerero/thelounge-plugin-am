@@ -1,0 +1,26 @@
+{
+  "name": "thelounge-plugin-answering-machine",
+  "version": "1.0.0",
+  "description": "A plugin for TheLounge that answers messages automatically based on server/channel rules.",
+  "main": "index.js",
+  "thelounge": {
+    "name": "answering-machine",
+    "type": "plugin",
+    "supports": ">=4.0.0"
+  },
+  "dependencies": {
+    "thelounge": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "thelounge",
+    "thelounge-plugin",
+    "irc",
+    "monitor",
+    "bot"
+  ],
+  "author": "juanjocerero",
+  "license": "MIT"
+}
