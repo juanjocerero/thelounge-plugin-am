@@ -36,7 +36,7 @@ function attachListener(client, network, rules, api) {
 module.exports = {
     onServerStart: function(api, helper) {
         console.info('[answering-machine] Plugin loaded. Running onServerStart.');
-        console.log('[answering-machine] DEBUG: api object keys:', Object.keys(api));
+        console.log('[answering-machine] DEBUG: helper object keys:', Object.keys(helper));
 
         let rules = [];
         try {
