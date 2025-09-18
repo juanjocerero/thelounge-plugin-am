@@ -61,7 +61,6 @@ function createPrivmsgHandler(client, network, api) {
         }
     };
 }
-
 const answeringMachineCommand = {
     input(client, target, command, args) {
         const [subcommand] = args;
@@ -124,15 +123,16 @@ const answeringMachineCommand = {
     allowDisconnected: false,
 };
 
-module.exports = {
-    onServerStart(api) {
-        console.info('[Answering Machine] Plugin loaded.');
-        // Give the command object a reference to the API
-        answeringMachineCommand.api = api;
-        // Initial load of rules on startup
-        loadRules();
-        // Register the command with TheLounge
-        api.Commands.add('answeringmachine', answeringMachineCommand);
-        console.info('[Answering Machine] Command /answeringmachine registered.');
-    },
+        clientManager.on('network:new', (data) => {
+            console.log(`[answering-machine] Attaching to new network for user '${data.client.name}'.`);
+            attachListener(data.client, data.network, rules, api);
+        });
+
+        clientManager.on('client:new', (client) => {
+            console.log(`[answering-machine] New client detected: '${client.name}'. Attaching listeners to its networks.`);
+            for (const network of client.networks) {
+                attachListener(client, network, rules, api);
+            }
+        });
+    }
 };
