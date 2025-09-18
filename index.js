@@ -191,9 +191,10 @@ module.exports = {
         console.info('[Answering Machine] Command /answeringmachine registered.');
 
         // Unwatch file on shutdown (optional but good practice)
-        api.onShutdown(() => {
-            console.info('[Answering Machine] Shutting down, unwatching configuration file.');
-            fs.unwatchFile(configFilePath);
-        });
+        // The api.onShutdown hook is commented out because TheLounge does not support it directly.
+        // api.onShutdown(() => {
+        //     console.info('[Answering Machine] Shutting down, unwatching configuration file.');
+        //     fs.unwatchFile(configFilePath);
+        // });
     },
 };
