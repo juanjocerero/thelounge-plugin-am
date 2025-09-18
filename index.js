@@ -5,6 +5,7 @@ const path = require('path');
 
 // Global state for the plugin
 let rules = [];
+let configFilePath = ''; // Path to the configuration file, determined at runtime
 // Key: network.uuid, Value: { handler: function, client: object }
 const activeListeners = new Map();
 
@@ -13,21 +14,51 @@ const activeListeners = new Map();
 * Can optionally send feedback to a user via an echo command.
 */
 function loadRules(api, client, targetChanId) {
+    console.log(`[Answering Machine] Attempting to load rules from: ${configFilePath}`);
     try {
-        const rulesPath = path.join(__dirname, 'rules.json');
-        const rulesFile = fs.readFileSync(rulesPath, 'utf8');
+        const rulesFile = fs.readFileSync(configFilePath, 'utf8');
         rules = JSON.parse(rulesFile);
-        const message = `[Answering Machine] Rules successfully loaded. ${rules.length} rules found.`;
+        const message = `[Answering Machine] Rules successfully reloaded. Found ${rules.length} rules.`;
         console.info(message);
         if (api && client && targetChanId) {
             api.client.runAsUser(`/echo ${message}`, client.uuid, targetChanId);
         }
     } catch (error) {
-        const message = `[Answering Machine] ERROR: Could not read or parse rules.json.`;
-        console.error(message, error);
+        let message = `[Answering Machine] ERROR: Could not read rules from ${configFilePath}.`;
+        if (error.code === 'ENOENT') {
+            message = `[Answering Machine] ERROR: Configuration file not found at ${configFilePath}.`;
+        } else if (error instanceof SyntaxError) {
+            message = `[Answering Machine] ERROR: Failed to parse ${configFilePath}. Please check for JSON syntax errors.`;
+        }
+        console.error(message, error.message);
         if (api && client && targetChanId) {
             api.client.runAsUser(`/echo ${message}`, client.uuid, targetChanId);
         }
+    }
+}
+
+/**
+* Ensures the configuration directory and file exist.
+* If they don't, it creates them with default values.
+*/
+function ensureConfigFileExists(configDir) {
+    if (!fs.existsSync(configDir)) {
+        console.info(`[Answering Machine] Creating configuration directory: ${configDir}`);
+        fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    if (!fs.existsSync(configFilePath)) {
+        console.info(`[Answering Machine] Creating default configuration file: ${configFilePath}`);
+        const defaultConfig = [
+            {
+                "server": "",
+                "listen_channel": "",
+                "trigger_text": "",
+                "response_message": "",
+                "response_channel": ""
+            }
+        ];
+        fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2) + '\n');
     }
 }
 
@@ -49,7 +80,7 @@ function createPrivmsgHandler(client, network, api) {
             const textMatch = data.message.includes(rule.trigger_text);
             
             if (serverMatch && channelMatch && textMatch) {
-                console.log(`[Answering Machine] Rule triggered by '${data.nick}' in '${data.target}'.`);
+                console.log(`[Answering Machine] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${JSON.stringify(rule)}`);
                 
                 const targetChannel = rule.response_channel || data.target;
                 const command = `PRIVMSG ${targetChannel} :${rule.response_message}`;
@@ -127,12 +158,42 @@ const answeringMachineCommand = {
 module.exports = {
     onServerStart(api) {
         console.info('[Answering Machine] Plugin loaded.');
+
+        // Determine the configuration path
+        const configDir = path.join(api.Config.getPersistentStorageDir(), 'answering-machine');
+        configFilePath = path.join(configDir, 'rules.json');
+        console.info(`[Answering Machine] Using configuration file: ${configFilePath}`);
+
         // Give the command object a reference to the API
         answeringMachineCommand.api = api;
+        // Ensure the configuration directory and file exist
+        ensureConfigFileExists(configDir);
+
         // Initial load of rules on startup
-        loadRules();
+        loadRules(api);
+
+        // Watch for changes in the configuration file
+        console.info(`[Answering Machine] Watching for file changes on: ${configFilePath}`);
+        fs.watchFile(configFilePath, { interval: 5007 }, (curr, prev) => {
+            if (curr.mtimeMs === 0) {
+                // File was likely deleted or is temporarily unavailable
+                console.log('[Answering Machine] Watched file is not accessible or has been deleted.');
+                return;
+            }
+            if (curr.mtime !== prev.mtime) {
+                console.info(`[Answering Machine] Change detected in ${configFilePath}. Reloading rules...`);
+                loadRules(api);
+            }
+        });
+
         // Register the command with TheLounge
         api.Commands.add('answeringmachine', answeringMachineCommand);
         console.info('[Answering Machine] Command /answeringmachine registered.');
+
+        // Unwatch file on shutdown (optional but good practice)
+        api.onShutdown(() => {
+            console.info('[Answering Machine] Shutting down, unwatching configuration file.');
+            fs.unwatchFile(configFilePath);
+        });
     },
 };

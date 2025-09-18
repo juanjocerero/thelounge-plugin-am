@@ -16,9 +16,22 @@ After installation, be sure to restart TheLounge for the plugin to be loaded.
 
 ## Configuration
 
-The plugin is configured via a `rules.json` file located in the plugin's directory (`node_modules/thelounge-plugin-answering-machine/rules.json`).
+Configuration is handled via a `rules.json` file that is automatically created by the plugin.
 
-You must create this file to define your auto-response rules. The plugin will automatically reload these rules on startup or when you use the `/answeringmachine reload` command.
+### File Location
+
+You no longer need to edit a file inside the `node_modules` directory. The plugin now manages its configuration file in a user-accessible location. The file is located inside TheLounge's persistent storage directory, which is typically:
+
+*   `~/.thelounge/answering-machine/rules.json` for standard installations.
+*   `/etc/thelounge/answering-machine/rules.json` or `/var/lib/thelounge/answering-machine/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages).
+
+The plugin will create this directory and a default empty `rules.json` file on its first run if they don't already exist.
+
+### Automatic Reloading
+
+**The plugin automatically watches for changes to this file.** When you save your modifications to `rules.json`, the plugin will instantly reload the rules in the background. You will see a confirmation message in TheLounge's server logs.
+
+This means you no longer need to manually run `/answeringmachine reload` after changing the rules, although the command is still available for convenience.
 
 ### `rules.json` Structure
 
@@ -66,7 +79,7 @@ The plugin provides the `/answeringmachine` command to control its behavior on a
     *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
 
 *   `/answeringmachine reload`
-    *   Reloads the rules from the `rules.json` file. This is useful for applying changes without restarting TheLounge.
+    *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
 
 ## How It Works
 
