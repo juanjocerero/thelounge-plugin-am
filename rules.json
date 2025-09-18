@@ -1,9 +1,0 @@
-[
-  {
-    "server": "Libera.Chat",
-    "listen_channel": "#thelounge-test",
-    "trigger_text": "test-messsage",
-    "response_message": "Test message received. The bot is answering.",
-    "response_channel": ""
-  }
-]
