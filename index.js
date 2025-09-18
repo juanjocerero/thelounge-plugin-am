@@ -82,7 +82,7 @@ const answeringMachineCommand = {
                 activeListeners.set(network.uuid, { handler, client });
                 
                 tellUser(`Listener started for network: ${network.name}.`);
-                console.log(`[Answering Machine] Listener started for ${client.name} on ${network.name}.`);
+                console.log(`[Answering Machine] Listener started for ${client.client.name} on ${network.name}.`);
                 return;
             }
             
@@ -97,7 +97,7 @@ const answeringMachineCommand = {
                 activeListeners.delete(network.uuid);
                 
                 tellUser(`Listener stopped for network: ${network.name}.`);
-                console.log(`[Answering Machine] Listener stopped for ${client.name} on ${network.name}.`);
+                console.log(`[Answering Machine] Listener stopped for ${client.client.name} on ${network.name}.`);
                 return;
             }
             
