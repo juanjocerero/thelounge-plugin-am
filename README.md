@@ -18,7 +18,7 @@ After installation, make sure to restart TheLounge for the plugin to be loaded.
 
 Configuration is handled via a `rules.json` file that is automatically created by the plugin. If one exists already, it is respected.
 
-### `rules.json` Structure
+### `rules.json` structure
 
 The file should contain an array of rule objects. Each rule object defines a trigger and a corresponding response.
 
@@ -28,38 +28,71 @@ The file should contain an array of rule objects. Each rule object defines a tri
     "server": "freenode",
     "listen_channel": "#my-channel",
     "trigger_text": "ping",
-    "response_message": "pong"
+    "response_message": "pong",
+    "response_channel": "" # it does not need to be filled; by default, the plugin answers in the same channel it received the trigger on
   },
-  {
-    [...]
-  }
 ]
 ```
 
-### File Location
+### Rule Properties
+
+*   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
+*   `listen_channel` (string): The channel name (e.g., `#my-project`) or `PrivateMessages` for private messages (**this function has not been tested sufficiently**, if you try it, post issues) where the plugin should listen for triggers.
+*   `trigger_text` (string): The text that must be included in a message to trigger the response.
+*   `response_message` (string): The message that the plugin will send in response.
+*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`. You can use `NickOfSender` to respond directly to the user who triggered the rule (**this function has not been tested sufficiently**, if you try it, post issues).
+
+### File location
 
 The plugin manages its configuration in a file located inside TheLounge's persistent storage directory, which is typically:
 
-*   `/etc/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` or `/var/lib/thelounge/answering-machine/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages it is the first option).
+*   `/etc/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages).
 *   `/var/opt/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` for the official Docker image.
 
 If you look at the logs for the service created by TheLounge you can see the exact location of the file, which the plugin logs for you.
 
 The plugin will create a default empty `rules.json` file on its first run if they don't already exist.
 
-### Automatic Reloading
+### Deploying inside a Docker container
+If you want to use the plugin inside a Docker image, here is a suggested `docker-compose.yml`: 
+```
+services:
+  thelounge:
+    image: ghcr.io/thelounge/thelounge:latest
+    container_name: thelounge
+    ports:
+      - "9001:9000"
+    restart: unless-stopped
+    volumes:
+      - thelounge:/var/opt/thelounge
+      - ./config.js:/var/opt/thelounge/config.js
+      - ./post-install.sh:/var/opt/thelounge/post-install.sh
+      - ./rules.json:/var/opt/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.js>
+volumes:
+  thelounge:
+```
+This way, you can provide a custom `rules.json` when instancing the container. 
+You can use `post-install.sh` to install the plugin:
+```
+#!/bin/sh
+export THELOUNGE_HOME=/var/opt/thelounge
 
-**The plugin automatically watches for changes to this file.** When you save your modifications to `rules.json`, the plugin will instantly reload the rules in the background. You will see a confirmation message in TheLounge's server logs.
+echo "--- Running post-install.sh ---"
+echo "Installing thelounge-plugin-answering-machine..."
+
+thelounge install thelounge-plugin-answering-machine
+
+echo "--- Finished running post-install.sh ---"
+```
+
+Just make sure to `chmod +x` your `post-install.sh` before starting the container.
+Do note that you need to provide a `config.json` file for your container and create a user for it.
+
+### Automatic reloading
+
+**The plugin automatically watches for changes to the `rules.json` file.** When you save your modifications to `rules.json`, the plugin will instantly reload the rules in the background. You will see a confirmation message in TheLounge's server logs.
 
 This means you no longer need to manually run `/answeringmachine reload` after changing the rules, although the command is still available for convenience.
-
-### Rule Properties
-
-*   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
-*   `listen_channel` (string): The channel name (e.g., `#my-project`) or `PrivateMessages` for private messages (**this function has not been tested sufficiently**) where the plugin should listen for triggers.
-*   `trigger_text` (string): The text that must be included in a message to trigger the response.
-*   `response_message` (string): The message that the plugin will send in response.
-*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`. You can use `NickOfSender` to respond directly to the user who triggered the rule (**this function has not been tested sufficiently**).
 
 ## Usage
 
