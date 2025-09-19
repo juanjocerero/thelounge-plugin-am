@@ -98,19 +98,26 @@ This means you no longer need to manually run `/answeringmachine reload` after c
 
 ## Debugging
 
-The plugin includes a debug mode that provides verbose logging, which can be useful for troubleshooting rules or reporting issues. This is controlled by a `config.json` file located in the same directory as `rules.json`.
+The plugin includes a debug mode that provides verbose logging, which can be useful for troubleshooting rules or reporting issues. You can control this mode in real-time using commands.
 
-### Enabling Debug Mode
+The recommended way to manage debug mode is with the `/am debug` commands:
 
-To enable debug mode, simply edit the `config.json` file and set the `debug` property to `true`:
+*   `/am debug enable`: Activates verbose logging.
+*   `/am debug disable`: Deactivates verbose logging.
+*   `/am debug status`: Shows whether debug mode is currently active.
+
+Changes are automatically saved to `config.json`, so your choice will be remembered after a restart.
+
+### Manual Configuration
+
+As an alternative, you can also control this feature by manually editing the `config.json` file (located in the same directory as `rules.json`). Set the `debug` property to `true` or `false`:
 
 ```json
 {
   "debug": true
 }
 ```
-
-The plugin will automatically detect the change and start printing detailed logs. To disable it, set the value back to `false`. You do not need to restart TheLounge.
+The plugin will automatically detect this change as well.
 
 ## Usage
 
@@ -131,7 +138,13 @@ The plugin provides the `/am` command (aliased from `/answeringmachine`) to cont
     *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
 
 *   `/am debug status`
-    *   Shows whether the debug mode is currently `ENABLED` or `DISABLED`.
+    *   Shows whether debug mode is currently `ENABLED` or `DISABLED`.
+
+*   `/am debug enable`
+    *   Enables verbose logging and saves the setting.
+
+*   `/am debug disable`
+    *   Disables verbose logging and saves the setting.
 
 
 ## License

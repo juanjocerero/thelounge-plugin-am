@@ -107,6 +107,20 @@ function loadPluginConfig() {
 }
 
 /**
+* Saves the current in-memory plugin configuration (`pluginConfig`) to the `config.json` file.
+* This function is critical for persisting changes made at runtime, like enabling/disabling debug mode.
+*/
+function savePluginConfig() {
+  PluginLogger.debug(`[AM] Attempting to save plugin config to: ${pluginConfigPath}`);
+  try {
+    fs.writeFileSync(pluginConfigPath, JSON.stringify(pluginConfig, null, 2) + '\n');
+    PluginLogger.debug(`[AM] Plugin config successfully saved to ${pluginConfigPath}.`);
+  } catch (error) {
+    PluginLogger.error(`[AM] CRITICAL ERROR: Failed to save plugin config to ${pluginConfigPath}. Changes may not be persisted.`, error.message);
+  }
+}
+
+/**
 * Ensures the configuration directory and file exist.
 * If they don't, it creates them with default values.
 */
@@ -215,6 +229,26 @@ function createPrivmsgHandler(client, network) {
   };
 }
 
+/**
+* Sends a detailed, multi-line help message to the user, explaining each command.
+* @param {function(string)} tellUser - The function to use for sending messages to the user.
+*/
+function sendHelpMessage(tellUser) {
+  tellUser("--- TheLounge Answering Machine Help ---");
+  tellUser("Usage: /am <command> [args...]");
+  tellUser(" "); // Spacer for readability
+  tellUser("General Commands:");
+  tellUser("  start          - Activates the listener for the current network.");
+  tellUser("  stop           - Deactivates the listener for the current network.");
+  tellUser("  status         - Shows if the listener is active or inactive for this network.");
+  tellUser("  reload         - Manually reloads rules from the rules.json file.");
+  tellUser(" ");
+  tellUser("Debugging Commands:");
+  tellUser("  debug status   - Shows if debug mode is currently ENABLED or DISABLED.");
+  tellUser("  debug enable   - Enables verbose logging. Change is saved to config.json.");
+  tellUser("  debug disable  - Disables verbose logging. Change is saved to config.json.");
+}
+
 const answeringMachineCommand = {
   input(client, target, command, args) {
     const [subcommand] = args;
@@ -275,16 +309,41 @@ const answeringMachineCommand = {
       
       case 'debug': {
         const [debugSubCommand] = args.slice(1);
-        if (debugSubCommand === 'status') {
-          tellUser(`Debug mode is currently ${pluginConfig.debug ? 'ENABLED' : 'DISABLED'}.`);
-        } else {
-          tellUser("Usage: /am debug <status>");
+        switch ((debugSubCommand || '').toLowerCase()) {
+          case 'enable': {
+            if (pluginConfig.debug) {
+              tellUser('Debug mode is already ENABLED.');
+            } else {
+              pluginConfig.debug = true;
+              savePluginConfig();
+              tellUser('Debug mode has been ENABLED. The change has been saved.');
+            }
+            break;
+          }
+          case 'disable': {
+            if (!pluginConfig.debug) {
+              tellUser('Debug mode is already DISABLED.');
+            } else {
+              pluginConfig.debug = false;
+              savePluginConfig();
+              tellUser('Debug mode has been DISABLED. The change has been saved.');
+            }
+            break;
+          }
+          case 'status': {
+            tellUser(`Debug mode is currently ${pluginConfig.debug ? 'ENABLED' : 'DISABLED'}.`);
+            break;
+          }
+          default: {
+            sendHelpMessage(tellUser);
+            break;
+          }
         }
         return;
       }
       
       default: {
-        tellUser("Usage: /am <start|stop|status|reload|debug status>");
+        sendHelpMessage(tellUser);
         return;
       }
     }
