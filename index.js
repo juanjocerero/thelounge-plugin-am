@@ -11,6 +11,26 @@ let configFilePath = ''; // Path to the configuration file, determined at runtim
 const activeListeners = new Map();
 
 /**
+ * A safe version of JSON.stringify that handles circular references,
+ * preventing crashes when logging complex objects.
+ */
+function safeJsonStringify(obj) {
+    const cache = new Set();
+    return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+            if (cache.has(value)) {
+                // Circular reference found, discard key
+                return '[Circular]';
+            }
+            // Store value in our collection
+            cache.add(value);
+        }
+        return value;
+    }, 2);
+}
+
+
+/**
 * Loads rules from rules.json into the global `rules` variable.
 * Can optionally send feedback to a user via an echo command.
 */
@@ -70,7 +90,7 @@ function ensureConfigFileExists(configDir) {
 function createPrivmsgHandler(client, network, api) {
     return (data) => {
         // Aggressive logging for every message to help debug rules
-        Logger.info(`[Answering Machine] Received privmsg on network '${network.name}'. Data: ${JSON.stringify(data)}`);
+        Logger.info(`[Answering Machine] Received privmsg on network '${network.name}'. Data: ${safeJsonStringify(data)}`);
 
         // 1. Avoid loops by not responding to self
         if (data.nick === network.irc.user.nick) {
@@ -84,7 +104,7 @@ function createPrivmsgHandler(client, network, api) {
             const textMatch = data.message.includes(rule.trigger_text);
             
             if (serverMatch && channelMatch && textMatch) {
-                Logger.info(`[Answering Machine] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${JSON.stringify(rule)}`);
+                Logger.info(`[Answering Machine] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${safeJsonStringify(rule)}`);
                 
                 const targetChannel = rule.response_channel || data.target;
                 const command = `PRIVMSG ${targetChannel} :${rule.response_message}`;
@@ -113,7 +133,7 @@ const answeringMachineCommand = {
                 }
                 
                 // Log the full network object to help admins find the correct server name for rules.json
-                Logger.info(`[Answering Machine] Attaching listener for network: ${network.name} (UUID: ${network.uuid}). Full network object: ${JSON.stringify(network, null, 2)}`);
+                Logger.info(`[Answering Machine] Attaching listener for network: ${network.name} (UUID: ${network.uuid}). Full network object: ${safeJsonStringify(network)}`);
                 const handler = createPrivmsgHandler(client, network, api);
                 network.irc.on('privmsg', handler);
                 activeListeners.set(network.uuid, { handler, client });
