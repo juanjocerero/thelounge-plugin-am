@@ -222,7 +222,7 @@ const answeringMachineCommand = {
             }
             
             default: {
-                tellUser("Usage: /answeringmachine <start|stop|status|reload>");
+                tellUser("Usage: /am <start|stop|status|reload>");
                 return;
             }
         }
@@ -264,7 +264,7 @@ module.exports = {
         });
         
         // Register the command with TheLounge
-        api.Commands.add('answeringmachine', answeringMachineCommand);
-        Logger.info('[Answering Machine] Command /answeringmachine registered.');
+        api.Commands.add('am', answeringMachineCommand);
+        Logger.info('[Answering Machine] Command /am registered.');
     },
 };
