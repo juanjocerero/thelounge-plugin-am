@@ -7,6 +7,7 @@ const path = require('path');
 let Logger;
 let rules = [];
 let configFilePath = ''; // Path to the configuration file, determined at runtime
+const ruleCooldowns = new Map(); // Key: rule object, Value: last execution timestamp
 // Key: network.uuid, Value: { handler: function, client: object }
 const activeListeners = new Map();
 
@@ -41,6 +42,9 @@ function loadRules(tellUser) {
         rules = JSON.parse(rulesFile);
         const message = `Rules successfully reloaded. Found ${rules.length} rules.`;
         Logger.info(`[Answering Machine] ${message}`);
+        // Reset all cooldowns whenever rules are reloaded
+        ruleCooldowns.clear();
+        Logger.info('[Answering Machine] All rule cooldowns have been reset.');
         if (tellUser) {
             tellUser(message);
         }
@@ -76,7 +80,8 @@ function ensureConfigFileExists(configDir) {
                 "listen_channel": "#my-channel",
                 "trigger_text": "ping",
                 "response_message": "pong",
-                "response_channel": ""
+                "response_channel": "",
+                "cooldown_seconds": 5
             }
         ];
         fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2) + '\n');
@@ -119,6 +124,17 @@ function createPrivmsgHandler(client, network) {
             if (serverMatch && channelMatch && textMatch) {
                 Logger.info(`[Answering Machine] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${safeJsonStringify(rule)}`);
                 
+                // 4. Cooldown check
+                const now = Date.now();
+                const cooldownSeconds = rule.cooldown_seconds === undefined ? 5 : rule.cooldown_seconds;
+                const cooldownMs = cooldownSeconds * 1000;
+                const lastExecuted = ruleCooldowns.get(rule);
+                
+                if (lastExecuted && (now - lastExecuted < cooldownMs)) {
+                    Logger.info(`[Answering Machine] Rule for '${rule.trigger_text}' is on cooldown. Skipping.`);
+                    continue; // Skip this rule and check the next one
+                }
+                
                 // Determine the target for the response
                 let responseTarget = rule.response_channel || data.target;
                 if (responseTarget.toLowerCase() === 'nickofsender') {
@@ -131,10 +147,12 @@ function createPrivmsgHandler(client, network) {
                 
                 if (!targetChan) {
                     Logger.error(`[Answering Machine] Could not find channel '${responseTarget}' to send response. Aborting this trigger.`);
-                    break; // Stop processing rules for this message if the target channel isn't found.
+                    continue; // Use continue instead of break to not block other rules
                 }
                 
-                // const command = `PRIVMSG ${responseTarget} :${rule.response_message}`;
+                // Set the cooldown timestamp *before* sending the message
+                ruleCooldowns.set(rule, now);
+                
                 const command = `${rule.response_message}`;
                 
                 Logger.info(`[Answering Machine] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
