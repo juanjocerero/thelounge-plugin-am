@@ -5,7 +5,6 @@ const path = require('path');
 
 // Global state for the plugin
 let Logger;
-let loungeApi;
 let rules = [];
 let configFilePath = ''; // Path to the configuration file, determined at runtime
 // Key: network.uuid, Value: { handler: function, client: object }
@@ -129,7 +128,7 @@ function createPrivmsgHandler(client, network) {
                 const command = `PRIVMSG ${responseTarget} :${rule.response_message}`;
                 
                 Logger.info(`[Answering Machine] Sending response to '${responseTarget}': ${rule.response_message}`);
-                loungeApi.client.runAsUser(command, client.uuid);
+                client.runAsUser(command, client.uuid);
                 break; // Stop processing more rules for this message
             }
         }
@@ -142,8 +141,9 @@ const answeringMachineCommand = {
         const network = target.network;
         
         // A helper function to send feedback to the user in the current window.
+        // It uses the 'client' and 'target' objects passed into this 'input' function.
         const tellUser = (message) => {
-            loungeApi.client.sendMessage(`[Answering Machine] ${message}`, target.chan.id, client.id);
+            client.sendMessage(`[Answering Machine] ${message}`, target.chan.id);
         };
         
         switch ((subcommand || '').toLowerCase()) {
@@ -204,9 +204,8 @@ const answeringMachineCommand = {
 
 module.exports = {
     onServerStart(api) {
-        // Make the logger and API available globally
+        // Make the logger available globally
         Logger = api.Logger;
-        loungeApi = api;
 
         Logger.info('[Answering Machine] Plugin loaded.');
 
