@@ -5,6 +5,7 @@ const path = require('path');
 
 // Global state for the plugin
 let Logger;
+let loungeApi;
 let rules = [];
 let configFilePath = ''; // Path to the configuration file, determined at runtime
 // Key: network.uuid, Value: { handler: function, client: object }
@@ -87,7 +88,7 @@ function ensureConfigFileExists(configDir) {
 * Creates the event handler for 'privmsg' events for a given network.
 * This is where rules are checked and responses are sent.
 */
-function createPrivmsgHandler(client, network, api) {
+function createPrivmsgHandler(client, network) {
     return (data) => {
         // Aggressive logging for every message to help debug rules
         Logger.info(`[Answering Machine] Received privmsg on network '${network.name}'. Data: ${safeJsonStringify(data)}`);
@@ -128,7 +129,7 @@ function createPrivmsgHandler(client, network, api) {
                 const command = `PRIVMSG ${responseTarget} :${rule.response_message}`;
                 
                 Logger.info(`[Answering Machine] Sending response to '${responseTarget}': ${rule.response_message}`);
-                api.client.runAsUser(command, client.uuid);
+                loungeApi.client.runAsUser(command, client.uuid);
                 break; // Stop processing more rules for this message
             }
         }
@@ -139,11 +140,10 @@ const answeringMachineCommand = {
     input(client, target, command, args) {
         const [subcommand] = args;
         const network = target.network;
-        const {api} = this; // Get the api object from the command context
         
         // A helper function to send feedback to the user in the current window.
         const tellUser = (message) => {
-            api.client.sendMessage(`[Answering Machine] ${message}`, target.chan.id, client.id);
+            loungeApi.client.sendMessage(`[Answering Machine] ${message}`, target.chan.id, client.id);
         };
         
         switch ((subcommand || '').toLowerCase()) {
@@ -155,7 +155,7 @@ const answeringMachineCommand = {
                 
                 // Log the full network object to help admins find the correct server name for rules.json
                 Logger.info(`[Answering Machine] Attaching listener for network: ${network.name} (UUID: ${network.uuid}). Full network object: ${safeJsonStringify(network)}`);
-                const handler = createPrivmsgHandler(client, network, api);
+                const handler = createPrivmsgHandler(client, network);
                 network.irc.on('privmsg', handler);
                 activeListeners.set(network.uuid, { handler, client });
                 
@@ -204,8 +204,9 @@ const answeringMachineCommand = {
 
 module.exports = {
     onServerStart(api) {
-        // Make the logger available globally
+        // Make the logger and API available globally
         Logger = api.Logger;
+        loungeApi = api;
 
         Logger.info('[Answering Machine] Plugin loaded.');
 
@@ -213,9 +214,6 @@ module.exports = {
         const configDir = path.join(api.Config.getPersistentStorageDir(), 'answering-machine');
         configFilePath = path.join(configDir, 'rules.json');
         Logger.info(`[Answering Machine] Using configuration file: ${configFilePath}`);
-
-        // Give the command object a reference to the API
-        answeringMachineCommand.api = api;
         
         // Ensure the configuration directory and file exist
         ensureConfigFileExists(configDir);
