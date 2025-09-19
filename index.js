@@ -143,7 +143,7 @@ const answeringMachineCommand = {
         // A helper function to send feedback to the user in the current window.
         // It uses the 'client' and 'target' objects passed into this 'input' function.
         const tellUser = (message) => {
-            client.sendMessage(`[Answering Machine] ${message}`, target.chan.id);
+            client.sendMessage(`[Answering Machine] ${message}`, target.chan);
         };
         
         switch ((subcommand || '').toLowerCase()) {
