@@ -134,7 +134,8 @@ function createPrivmsgHandler(client, network) {
                     break; // Stop processing rules for this message if the target channel isn't found.
                 }
 
-                const command = `PRIVMSG ${responseTarget} :${rule.response_message}`;
+                // const command = `PRIVMSG ${responseTarget} :${rule.response_message}`;
+                const command = `${rule.response_message}`;
 
                 Logger.info(`[Answering Machine] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
                 client.runAsUser(command, targetChan.id);
