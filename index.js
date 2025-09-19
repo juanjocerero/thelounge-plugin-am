@@ -32,28 +32,28 @@ function safeJsonStringify(obj) {
 
 /**
 * Loads rules from rules.json into the global `rules` variable.
-* Can optionally send feedback to a user via an echo command.
+* Can optionally send feedback to a user.
 */
-function loadRules(api, client, targetChanId) {
+function loadRules(tellUser) {
     Logger.info(`[Answering Machine] Attempting to load rules from: ${configFilePath}`);
     try {
         const rulesFile = fs.readFileSync(configFilePath, 'utf8');
         rules = JSON.parse(rulesFile);
-        const message = `[Answering Machine] Rules successfully reloaded. Found ${rules.length} rules.`;
-        Logger.info(message);
-        if (api && client && targetChanId) {
-            api.client.runAsUser(`/echo ${message}`, client.uuid, targetChanId);
+        const message = `Rules successfully reloaded. Found ${rules.length} rules.`;
+        Logger.info(`[Answering Machine] ${message}`);
+        if (tellUser) {
+            tellUser(message);
         }
     } catch (error) {
-        let message = `[Answering Machine] ERROR: Could not read rules from ${configFilePath}.`;
+        let errMessage = `ERROR: Could not read rules from ${configFilePath}.`;
         if (error.code === 'ENOENT') {
-            message = `[Answering Machine] ERROR: Configuration file not found at ${configFilePath}.`;
+            errMessage = `ERROR: Configuration file not found at ${configFilePath}.`;
         } else if (error instanceof SyntaxError) {
-            message = `[Answering Machine] ERROR: Failed to parse ${configFilePath}. Please check for JSON syntax errors.`;
+            errMessage = `ERROR: Failed to parse ${configFilePath}. Please check for JSON syntax errors.`;
         }
-        Logger.error(message, error.message);
-        if (api && client && targetChanId) {
-            api.client.runAsUser(`/echo ${message}`, client.uuid, targetChanId);
+        Logger.error(`[Answering Machine] ${errMessage}`, error.message);
+        if (tellUser) {
+            tellUser(errMessage);
         }
     }
 }
@@ -72,10 +72,10 @@ function ensureConfigFileExists(configDir) {
         Logger.info(`[Answering Machine] Creating default configuration file: ${configFilePath}`);
         const defaultConfig = [
             {
-                "server": "",
-                "listen_channel": "",
-                "trigger_text": "",
-                "response_message": "",
+                "server": "freenode",
+                "listen_channel": "#my-channel",
+                "trigger_text": "ping",
+                "response_message": "pong",
                 "response_channel": ""
             }
         ];
@@ -92,24 +92,42 @@ function createPrivmsgHandler(client, network, api) {
         // Aggressive logging for every message to help debug rules
         Logger.info(`[Answering Machine] Received privmsg on network '${network.name}'. Data: ${safeJsonStringify(data)}`);
 
-        // 1. Avoid loops by not responding to self
-        if (data.nick === network.irc.user.nick) {
-            return;
-        }
+        // This check incorrectly blocked all messages from the user.
+        // A better loop avoidance mechanism is needed, but for now, we disable it to allow rules to fire.
+        // if (data.nick === network.irc.user.nick) {
+        //     return;
+        // }
         
-        // 2. Iterate over rules
+        // Iterate over rules
         for (const rule of rules) {
+            // 1. Check if the rule is for the correct server
             const serverMatch = rule.server === network.name;
-            const channelMatch = rule.listen_channel.toLowerCase() === data.target.toLowerCase();
+
+            // 2. Check if the message is in the correct channel (or is a PM)
+            let channelMatch = false;
+            if (rule.listen_channel.toLowerCase() === 'privatemessages') {
+                // If rule is for PMs, check if the message target is the user's own nick
+                channelMatch = data.target.toLowerCase() === network.irc.user.nick.toLowerCase();
+            } else {
+                // Otherwise, check for a standard channel name match
+                channelMatch = rule.listen_channel.toLowerCase() === data.target.toLowerCase();
+            }
+            
+            // 3. Check if the trigger text is in the message
             const textMatch = data.message.includes(rule.trigger_text);
             
             if (serverMatch && channelMatch && textMatch) {
                 Logger.info(`[Answering Machine] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${safeJsonStringify(rule)}`);
                 
-                const targetChannel = rule.response_channel || data.target;
-                const command = `PRIVMSG ${targetChannel} :${rule.response_message}`;
+                // Determine the target for the response
+                let responseTarget = rule.response_channel || data.target;
+                if (responseTarget.toLowerCase() === 'nickofsender') {
+                    responseTarget = data.nick;
+                }
                 
-                Logger.info(`[Answering Machine] Sending response to '${targetChannel}': ${rule.response_message}`);
+                const command = `PRIVMSG ${responseTarget} :${rule.response_message}`;
+                
+                Logger.info(`[Answering Machine] Sending response to '${responseTarget}': ${rule.response_message}`);
                 api.client.runAsUser(command, client.uuid);
                 break; // Stop processing more rules for this message
             }
@@ -123,7 +141,10 @@ const answeringMachineCommand = {
         const network = target.network;
         const {api} = this; // Get the api object from the command context
         
-        const tellUser = (message) => client.runAsUser(`/echo [Answering Machine] ${message}`, target.chan.id);
+        // A helper function to send feedback to the user in the current window.
+        const tellUser = (message) => {
+            api.client.sendMessage(`[Answering Machine] ${message}`, target.chan.id, client.id);
+        };
         
         switch ((subcommand || '').toLowerCase()) {
             case 'start': {
@@ -168,7 +189,7 @@ const answeringMachineCommand = {
             }
             
             case 'reload': {
-                loadRules(api, client, target.chan.id);
+                loadRules(tellUser);
                 return;
             }
             
@@ -199,8 +220,8 @@ module.exports = {
         // Ensure the configuration directory and file exist
         ensureConfigFileExists(configDir);
 
-        // Initial load of rules on startup
-        loadRules(api);
+        // Initial load of rules on startup (no user feedback on initial load)
+        loadRules();
 
         // Watch for changes in the configuration file
         Logger.info(`[Answering Machine] Watching for file changes on: ${configFilePath}`);
@@ -212,19 +233,13 @@ module.exports = {
             }
             if (curr.mtime !== prev.mtime) {
                 Logger.info(`[Answering Machine] Change detected in ${configFilePath}. Reloading rules...`);
-                loadRules(api);
+                // No user feedback on automatic reload
+                loadRules();
             }
         });
 
         // Register the command with TheLounge
         api.Commands.add('answeringmachine', answeringMachineCommand);
         Logger.info('[Answering Machine] Command /answeringmachine registered.');
-
-        // Unwatch file on shutdown (optional but good practice)
-        // The api.onShutdown hook is commented out because TheLounge does not support it directly.
-        // api.onShutdown(() => {
-        //     Logger.info('[Answering Machine] Shutting down, unwatching configuration file.');
-        //     fs.unwatchFile(configFilePath);
-        // });
     },
 };
