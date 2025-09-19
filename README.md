@@ -96,23 +96,42 @@ Do note that you need to provide a `config.json` file for your container and cre
 
 This means you no longer need to manually run `/answeringmachine reload` after changing the rules, although the command is still available for convenience.
 
+## Debugging
+
+The plugin includes a debug mode that provides verbose logging, which can be useful for troubleshooting rules or reporting issues. This is controlled by a `config.json` file located in the same directory as `rules.json`.
+
+### Enabling Debug Mode
+
+To enable debug mode, simply edit the `config.json` file and set the `debug` property to `true`:
+
+```json
+{
+  "debug": true
+}
+```
+
+The plugin will automatically detect the change and start printing detailed logs. To disable it, set the value back to `false`. You do not need to restart TheLounge.
+
 ## Usage
 
-The plugin provides the `/answeringmachine` command to control its behavior on a per-network basis.
+The plugin provides the `/am` command (aliased from `/answeringmachine`) to control its behavior on a per-network basis.
 
 ### Commands
 
-*   `/answeringmachine start`
+*   `/am start`
     *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`. You **must** specify the exact name you defined in TheLounge for the Network: for example, not `irc.libera.chat` but `Libera.Chat` if you named it that way.
 
-*   `/answeringmachine stop`
+*   `/am stop`
     *   Stops the listener for the current IRC network.
 
-*   `/answeringmachine status`
+*   `/am status`
     *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
 
-*   `/answeringmachine reload`
+*   `/am reload`
     *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
+
+*   `/am debug status`
+    *   Shows whether the debug mode is currently `ENABLED` or `DISABLED`.
 
 
 ## License
