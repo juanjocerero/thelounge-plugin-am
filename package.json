@@ -1,6 +1,6 @@
 {
   "name": "thelounge-plugin-answering-machine",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A plugin for TheLounge that answers messages automatically based on server/channel rules.",
   "main": "index.js",
   "thelounge": {
