@@ -245,8 +245,8 @@ function sendHelpMessage(tellUser) {
   tellUser(" ");
   tellUser("Debugging Commands:");
   tellUser("  debug status   - Shows if debug mode is currently ENABLED or DISABLED.");
-  tellUser("  debug enable   - Enables verbose logging. Change is saved to config.json.");
-  tellUser("  debug disable  - Disables verbose logging. Change is saved to config.json.");
+  tellUser("  debug enable   - Enables verbose logging.");
+  tellUser("  debug disable  - Disables verbose logging.");
 }
 
 const answeringMachineCommand = {
