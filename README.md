@@ -43,6 +43,8 @@ The plugin manages its configuration in a file located inside TheLounge's persis
 *   `/etc/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` or `/var/lib/thelounge/answering-machine/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages it is the first option).
 *   `/var/opt/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` for the official Docker image.
 
+If you look at the logs for the service created by TheLounge you can see the exact location of the file, which the plugin logs for you.
+
 The plugin will create a default empty `rules.json` file on its first run if they don't already exist.
 
 ### Automatic Reloading
