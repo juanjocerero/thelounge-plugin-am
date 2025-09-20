@@ -65,10 +65,10 @@ The file should contain an array of rule objects. Each rule object defines a tri
 ### Rule properties
 
 *   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
-*   `listen_channel` (string): The channel name (e.g., `#my-project`) or `PrivateMessages` for private messages (**this function has not been tested sufficiently**, if you try it, post issues) where the plugin should listen for triggers.
+*   `listen_channel` (string): The channel name (e.g., `#my-project`) where the plugin should listen for triggers.
 *   `trigger_text` (string): The text that must be included in a message to trigger the response.
 *   `response_message` (string): The message that the plugin will send in response.
-*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`. You can use `NickOfSender` to respond directly to the user who triggered the rule (**this function has not been tested sufficiently**, if you try it, post issues).
+*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`.
 *   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
 
 ### File location

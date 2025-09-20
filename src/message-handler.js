@@ -32,14 +32,7 @@ function createPrivmsgHandler(client, network) {
     
     for (const rule of rules) {
       const serverMatch = rule.server === network.name;
-      
-      let channelMatch = false;
-      if (rule.listen_channel.toLowerCase() === 'privatemessages') {
-        channelMatch = data.target.toLowerCase() === network.irc.user.nick.toLowerCase();
-      } else {
-        channelMatch = rule.listen_channel.toLowerCase() === data.target.toLowerCase();
-      }
-      
+      const channelMatch = rule.listen_channel.toLowerCase() === data.target.toLowerCase();
       const textMatch = data.message.includes(rule.trigger_text);
       
       if (serverMatch && channelMatch && textMatch) {
@@ -55,11 +48,7 @@ function createPrivmsgHandler(client, network) {
           continue;
         }
         
-        let responseTarget = rule.response_channel || data.target;
-        if (responseTarget.toLowerCase() === 'nickofsender') {
-          responseTarget = data.nick;
-        }
-        
+        const responseTarget = rule.response_channel || data.target;
         const targetChan = network.channels.find(c => c.name.toLowerCase() === responseTarget.toLowerCase());
         
         if (!targetChan) {
@@ -69,6 +58,13 @@ function createPrivmsgHandler(client, network) {
         
         ruleCooldowns.set(rule, now);
         
+        /**
+         * The naming of this variable assumes the plugin is always sending messages to public channels.
+         * Since /say is the default command, this works. However, if in the future we add 
+         * the possibility of using other commands, like sending a private message, we should
+         * rewrite this block of code to properly react to those.
+         * Reference documentation: https://en.wikipedia.org/wiki/List_of_IRC_commands
+         */
         const responseMessage = `${rule.response_message}`;
         
         PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
