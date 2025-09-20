@@ -1,10 +1,10 @@
 {
-  "name": "thelounge-plugin-answering-machine",
-  "version": "3.0.0",
+  "name": "thelounge-plugin-am",
+  "version": "0.1.0",
   "description": "A plugin for TheLounge that answers messages automatically based on server/channel rules.",
   "main": "index.js",
   "thelounge": {
-    "name": "answering-machine",
+    "name": "am",
     "type": "plugin",
     "supports": ">=4.0.0"
   },
@@ -22,6 +22,6 @@
     "bot"
   ],
   "author": "juanjocerero",
-  "repository": "juanjocerero/thelounge-answering-machine",
+  "repository": "juanjocerero/thelounge-plugin-am",
   "license": "MIT"
 }
