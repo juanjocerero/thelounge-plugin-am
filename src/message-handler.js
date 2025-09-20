@@ -24,52 +24,65 @@ function safeJsonStringify(obj) {
 */
 function createPrivmsgHandler(client, network) {
   return (data) => {
-    // Fetch fresh rules and cooldowns on every message to ensure they are not stale.
     const rules = ruleManager.getRules();
     const ruleCooldowns = ruleManager.getRuleCooldowns();
 
     PluginLogger.debug(`[AM] Received privmsg on network '${network.name}'. Data: ${safeJsonStringify(data)}`);
-    
+
     for (const rule of rules) {
-      const serverMatch = rule.server === network.name;
-      const channelMatch = rule.listen_channel.toLowerCase() === data.target.toLowerCase();
-      const textMatch = data.message.includes(rule.trigger_text);
-      
-      if (serverMatch && channelMatch && textMatch) {
-        PluginLogger.debug(`[AM] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${safeJsonStringify(rule)}`);
-        
-        const now = Date.now();
-        const cooldownSeconds = rule.cooldown_seconds === undefined ? 5 : rule.cooldown_seconds;
-        const cooldownMs = cooldownSeconds * 1000;
-        const lastExecuted = ruleCooldowns.get(rule);
-        
-        if (lastExecuted && (now - lastExecuted < cooldownMs)) {
-          PluginLogger.debug(`[AM] Rule for '${rule.trigger_text}' is on cooldown. Skipping.`);
-          continue;
+      if (rule.server !== network.name || rule.listen_channel.toLowerCase() !== data.target.toLowerCase()) {
+        continue;
+      }
+
+      // Always treat trigger_text as a regex. First, substitute {{me}} variable.
+      const triggerText = (rule.trigger_text || '').replace(/{{me}}/g, network.nick);
+
+      try {
+        const regex = new RegExp(triggerText, rule.trigger_flags || '');
+        const matchResult = data.message.match(regex);
+
+        if (matchResult) {
+          PluginLogger.debug(`[AM] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${safeJsonStringify(rule)}`);
+
+          const now = Date.now();
+          const cooldownSeconds = rule.cooldown_seconds === undefined ? 5 : rule.cooldown_seconds;
+          const cooldownMs = cooldownSeconds * 1000;
+          const lastExecuted = ruleCooldowns.get(rule);
+
+          if (lastExecuted && (now - lastExecuted < cooldownMs)) {
+            PluginLogger.debug(`[AM] Rule for '${rule.trigger_text}' is on cooldown. Skipping.`);
+            continue;
+          }
+
+          const responseTarget = rule.response_channel || data.target;
+          const targetChan = network.channels.find(c => c.name.toLowerCase() === responseTarget.toLowerCase());
+
+          if (!targetChan) {
+            PluginLogger.error(`[AM] Could not find channel '${responseTarget}' to send response.`);
+            continue;
+          }
+
+          ruleCooldowns.set(rule, now);
+
+          // Generate response, substituting {{sender}} and capture groups ($1, $2, ...)
+          let responseText = (rule.response_text || '').replace(/{{sender}}/g, data.nick);
+          if (matchResult.length > 1) {
+            responseText = responseText.replace(/\$(\d)/g, (match, groupNumber) => {
+              const index = parseInt(groupNumber, 10);
+              if (index > 0 && index < matchResult.length && matchResult[index]) {
+                return matchResult[index];
+              }
+              return match;
+            });
+          }
+
+          PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${responseText}`);
+          client.runAsUser(responseText, targetChan.id);
+          break; // Stop processing further rules for this message
         }
-        
-        const responseTarget = rule.response_channel || data.target;
-        const targetChan = network.channels.find(c => c.name.toLowerCase() === responseTarget.toLowerCase());
-        
-        if (!targetChan) {
-          PluginLogger.error(`[AM] Could not find channel '${responseTarget}' to send response. Aborting this trigger.`);
-          continue;
-        }
-        
-        ruleCooldowns.set(rule, now);
-        
-        /**
-         * The naming of this variable assumes the plugin is always sending messages to public channels.
-         * Since /say is the default command, this works. However, if in the future we add 
-         * the possibility of using other commands, like sending a private message, we should
-         * rewrite this block of code to properly react to those.
-         * Reference documentation: https://en.wikipedia.org/wiki/List_of_IRC_commands
-         */
-        const responseMessage = `${rule.response_message}`;
-        
-        PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
-        client.runAsUser(responseMessage, targetChan.id);
-        break;
+      } catch (e) {
+        PluginLogger.error(`[AM] Invalid regex in rule: ${safeJsonStringify(rule)}`, e.message);
+        continue; // Skip this rule and check the next one
       }
     }
   };

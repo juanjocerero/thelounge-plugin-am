@@ -55,10 +55,11 @@ function ensureConfigFileExists() {
     PluginLogger.info(`[AM] Creating default rules file: ${configFilePath}`);
     const defaultConfig = [
       {
-        "server": "freenode",
-        "listen_channel": "#my-channel",
+        "server": "Libera.Chat",
+        "listen_channel": "#lounge-testing",
         "trigger_text": "ping",
-        "response_message": "pong",
+        "trigger_flags": "i",
+        "response_text": "pong, {{sender}}!",
         "response_channel": "",
         "cooldown_seconds": 5
       }
