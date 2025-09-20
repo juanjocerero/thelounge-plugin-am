@@ -65,10 +65,10 @@ The file should contain an array of rule objects. Each rule object defines a tri
 ### Rule properties
 
 *   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
-*   `listen_channel` (string): The channel name (e.g., `#my-project`) or `PrivateMessages` for private messages (**this function has not been tested sufficiently**, if you try it, post issues) where the plugin should listen for triggers.
+*   `listen_channel` (string): The channel name (e.g., `#my-project`) where the plugin should listen for triggers.
 *   `trigger_text` (string): The text that must be included in a message to trigger the response.
 *   `response_message` (string): The message that the plugin will send in response.
-*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`. You can use `NickOfSender` to respond directly to the user who triggered the rule (**this function has not been tested sufficiently**, if you try it, post issues).
+*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`.
 *   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
 
 ### File location
@@ -124,6 +124,22 @@ This file is different from the `config/config.json` file that controls paramete
 **The plugin automatically watches for changes to the `rules.json` file.** When you save your modifications to `rules.json`, the plugin will instantly reload the rules in the background. You will see a confirmation message in TheLounge's server logs.
 
 This means you no longer need to manually run `/am reload` after changing the rules, although the command is still available for convenience.
+
+## Code Structure
+
+For those interested in contributing or understanding the plugin's internals, the codebase is organized into several modules within the `src/` directory. This modular approach separates concerns, making the code easier to maintain and extend.
+
+*   `index.js`: The main entry point of the plugin. It is responsible for initializing all other modules, wiring them together, and registering commands and file watchers with TheLounge API. It acts as the central orchestrator.
+
+*   `src/logger.js`: A wrapper around TheLounge's native logger. It provides standard `info` and `error` methods, along with a `debug` method that only prints messages when debug mode is enabled in the plugin's configuration.
+
+*   `src/plugin-config.js`: Manages the plugin's internal configuration file (`config.json`). This file stores settings like the debug mode status. This module handles loading, saving, and providing access to these settings.
+
+*   `src/rule-manager.js`: Responsible for everything related to the user-defined rules (`rules.json`). It handles loading, parsing, and providing access to the rules. In the future, it will also contain the logic for adding, removing, and updating rules via commands.
+
+*   `src/message-handler.js`: Contains the core logic of the plugin. It defines the `privmsg` event handler that checks incoming messages against the rules from the `rule-manager` and decides when to trigger a response. It also manages rule cooldowns.
+
+*   `src/commands.js`: Defines the `/am` command and all its subcommands (`start`, `stop`, `reload`, `debug`, etc.). It acts as the user-facing interface, calling functions from other modules to execute the requested actions.
 
 ## Debugging
 
