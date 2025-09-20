@@ -29,8 +29,9 @@ The file should contain an array of rule objects. Each rule object defines a tri
     "listen_channel": "#my-channel",
     "trigger_text": "ping",
     "response_message": "pong",
-    "response_channel": "" # it does not need to be filled; by default, the plugin answers in the same channel it received the trigger on
-  },
+    "response_channel": "",
+    "cooldown_seconds": 5
+  }
 ]
 ```
 
@@ -41,6 +42,7 @@ The file should contain an array of rule objects. Each rule object defines a tri
 *   `trigger_text` (string): The text that must be included in a message to trigger the response.
 *   `response_message` (string): The message that the plugin will send in response.
 *   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`. You can use `NickOfSender` to respond directly to the user who triggered the rule (**this function has not been tested sufficiently**, if you try it, post issues).
+*   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
 
 ### File location
 
@@ -94,23 +96,55 @@ Do note that you need to provide a `config.json` file for your container and cre
 
 This means you no longer need to manually run `/answeringmachine reload` after changing the rules, although the command is still available for convenience.
 
+## Debugging
+
+The plugin includes a debug mode that provides verbose logging, which can be useful for troubleshooting rules or reporting issues. You can control this mode in real-time using commands.
+
+The recommended way to manage debug mode is with the `/am debug` commands:
+
+*   `/am debug enable`: Activates verbose logging.
+*   `/am debug disable`: Deactivates verbose logging.
+*   `/am debug status`: Shows whether debug mode is currently active.
+
+Changes are automatically saved to `config.json`, so your choice will be remembered after a restart.
+
+### Manual Configuration
+
+As an alternative, you can also control this feature by manually editing the `config.json` file (located in the same directory as `rules.json`). Set the `debug` property to `true` or `false`:
+
+```json
+{
+  "debug": true
+}
+```
+The plugin will automatically detect this change as well.
+
 ## Usage
 
-The plugin provides the `/answeringmachine` command to control its behavior on a per-network basis.
+The plugin provides the `/am` command (aliased from `/answeringmachine`) to control its behavior on a per-network basis.
 
 ### Commands
 
-*   `/answeringmachine start`
+*   `/am start`
     *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`. You **must** specify the exact name you defined in TheLounge for the Network: for example, not `irc.libera.chat` but `Libera.Chat` if you named it that way.
 
-*   `/answeringmachine stop`
+*   `/am stop`
     *   Stops the listener for the current IRC network.
 
-*   `/answeringmachine status`
+*   `/am status`
     *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
 
-*   `/answeringmachine reload`
+*   `/am reload`
     *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
+
+*   `/am debug status`
+    *   Shows whether debug mode is currently `ENABLED` or `DISABLED`.
+
+*   `/am debug enable`
+    *   Enables verbose logging and saves the setting.
+
+*   `/am debug disable`
+    *   Disables verbose logging and saves the setting.
 
 
 ## License
