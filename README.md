@@ -1,6 +1,6 @@
 # TheLounge Answering Machine Plugin
 
-[![NPM version](https://img.shields.io/npm/v/thelounge-plugin-answering-machine.svg)](https://www.npmjs.com/package/thelounge-plugin-answering-machine)
+[![NPM version](https://img.shields.io/npm/v/thelounge-plugin-am.svg)](https://www.npmjs.com/package/thelounge-plugin-am)
 
 A plugin for TheLounge that provides "answering machine" functionality, automatically replying to messages based on a configurable set of rules.
 
@@ -9,7 +9,7 @@ A plugin for TheLounge that provides "answering machine" functionality, automati
 Install the plugin via the `thelounge` command line:
 
 ```bash
-thelounge install thelounge-plugin-answering-machine
+thelounge install thelounge-plugin-am
 ```
 
 After installation, make sure to restart TheLounge for the plugin to be loaded.
@@ -48,8 +48,8 @@ The file should contain an array of rule objects. Each rule object defines a tri
 
 The plugin manages its configuration in a file located inside TheLounge's persistent storage directory, which is typically:
 
-*   `/etc/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages).
-*   `/var/opt/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.json` for the official Docker image.
+*   `/etc/thelounge/packages/thelounge-plugin-answering-machine/config/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages).
+*   `/var/opt/thelounge/packages/thelounge-plugin-answering-machine/config/rules.json` for the official Docker image.
 
 If you look at the logs for the service created by TheLounge you can see the exact location of the file, which the plugin logs for you.
 
@@ -69,7 +69,7 @@ services:
       - thelounge:/var/opt/thelounge
       - ./config.js:/var/opt/thelounge/config.js
       - ./post-install.sh:/var/opt/thelounge/post-install.sh
-      - ./rules.json:/var/opt/thelounge/packages/thelounge-plugin-answering-machine/answering-machine/rules.js>
+      - ./rules.json:/var/opt/thelounge/packages/thelounge-plugin-am/config/rules.json
 volumes:
   thelounge:
 ```
@@ -80,9 +80,9 @@ You can use `post-install.sh` to install the plugin:
 export THELOUNGE_HOME=/var/opt/thelounge
 
 echo "--- Running post-install.sh ---"
-echo "Installing thelounge-plugin-answering-machine..."
+echo "Installing thelounge-plugin-am..."
 
-thelounge install thelounge-plugin-answering-machine
+thelounge install thelounge-plugin-am
 
 echo "--- Finished running post-install.sh ---"
 ```
@@ -94,7 +94,7 @@ Do note that you need to provide a `config.json` file for your container and cre
 
 **The plugin automatically watches for changes to the `rules.json` file.** When you save your modifications to `rules.json`, the plugin will instantly reload the rules in the background. You will see a confirmation message in TheLounge's server logs.
 
-This means you no longer need to manually run `/answeringmachine reload` after changing the rules, although the command is still available for convenience.
+This means you no longer need to manually run `/am reload` after changing the rules, although the command is still available for convenience.
 
 ## Debugging
 
@@ -121,7 +121,7 @@ The plugin will automatically detect this change as well.
 
 ## Usage
 
-The plugin provides the `/am` command (aliased from `/answeringmachine`) to control its behavior on a per-network basis.
+The plugin provides the `/am` command to control its behavior on a per-network basis.
 
 ### Commands
 
