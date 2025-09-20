@@ -29,7 +29,7 @@ function sendHelpMessage(tellUser) {
 }
 
 const answeringMachineCommand = {
-  input(client, target, args) {
+  input(client, target, _command, args) {
     const [subcommand] = args;
     const network = target.network;
     
