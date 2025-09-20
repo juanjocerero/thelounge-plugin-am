@@ -1,6 +1,6 @@
 {
   "name": "thelounge-plugin-am",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A plugin for TheLounge that answers messages automatically based on server/channel rules.",
   "main": "index.js",
   "thelounge": {
