@@ -112,7 +112,8 @@ You can use capturing groups `(...)` in your `trigger_text` and reference the ca
 {
   "server": "MyServer",
   "listen_channel": "#questions",
-  "trigger_text": "have you ever heard of (.+)\\"?,  "trigger_flags": "i",
+  "trigger_text": "have you ever heard of (.+)\\?",  
+  "trigger_flags": "i",
   "response_text": "Of course I've heard of $1! It's one of my favorite topics."
 }
 ```
