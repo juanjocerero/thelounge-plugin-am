@@ -117,7 +117,7 @@ You can use capturing groups `(...)` in your `trigger_text` and reference the ca
   "response_text": "Of course I've heard of $1! It's one of my favorite topics."
 }
 ```
-If a user asks `"have you ever heard of I Have No Mouth And I Must Scream, by Harlan Ellison?"`, the bot will capture `"Taylor Swift"` into `$1` and respond: `"Of course I've heard of I Have No Mouth And I Must Scream, by Harlan Ellison! It's one of my favorite books, and inspired one of my favorite games."`
+If a user asks `"have you ever heard of I Have No Mouth And I Must Scream, by Harlan Ellison?"`, the bot will respond: `"Of course I've heard of I Have No Mouth And I Must Scream, by Harlan Ellison! It's one of my favorite books, and inspired one of my favorite games."`
 
 ### File location
 
