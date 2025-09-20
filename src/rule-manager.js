@@ -17,6 +17,37 @@ function init(configDir) {
 }
 
 /**
+ * Loads rules from rules.json.
+ * @param {function(string)} tellUser - Optional callback to send feedback to a user.
+ */
+function loadRules(tellUser) {
+  PluginLogger.debug(`[AM] Attempting to load rules from: ${configFilePath}`);
+  try {
+    const rulesFile = fs.readFileSync(configFilePath, 'utf8');
+    rules = JSON.parse(rulesFile);
+    const message = `Rules successfully reloaded. Found ${rules.length} rules.`;
+    PluginLogger.info(`[AM] ${message}`);
+    // Reset all cooldowns whenever rules are reloaded
+    ruleCooldowns.clear();
+    PluginLogger.debug('[AM] All rule cooldowns have been reset.');
+    if (tellUser) {
+      tellUser(message);
+    }
+  } catch (error) {
+    let errMessage = `ERROR: Could not read rules from ${configFilePath}.`;
+    if (error.code === 'ENOENT') {
+      errMessage = `ERROR: Configuration file not found at ${configFilePath}.`;
+    } else if (error instanceof SyntaxError) {
+      errMessage = `ERROR: Failed to parse ${configFilePath}. Please check for JSON syntax errors.`;
+    }
+    PluginLogger.error(`[AM] ${errMessage}`, error.message);
+    if (tellUser) {
+      tellUser(errMessage);
+    }
+  }
+}
+
+/**
  * Ensures the rules.json file exists, creating it with defaults if not.
  */
 function ensureConfigFileExists() {
