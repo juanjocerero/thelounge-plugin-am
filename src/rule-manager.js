@@ -58,18 +58,10 @@ function ensureConfigFileExists() {
         "server": "Libera.Chat",
         "listen_channel": "#lounge-testing",
         "trigger_text": "ping",
-        "response_message": "pong, {{sender}}!",
+        "trigger_flags": "i",
+        "response_text": "pong, {{sender}}!",
         "response_channel": "",
         "cooldown_seconds": 5
-      },
-      {
-        "//_comment": "This is an example of an advanced rule. Remove the //_comment key to enable it.",
-        "server": "MyServer",
-        "listen_channel": "#bots",
-        "trigger_pattern": "^tell me about (.+)",
-        "trigger_flags": "i",
-        "response_message": "I think $1 is very interesting, {{sender}}.",
-        "cooldown_seconds": 10
       }
     ];
     fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2) + '\n');

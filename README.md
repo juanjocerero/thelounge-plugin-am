@@ -52,10 +52,11 @@ The file should contain an array of rule objects. Each rule object defines a tri
 ```json
 [
   {
-    "server": "freenode",
-    "listen_channel": "#my-channel",
+    "server": "Libera.Chat",
+    "listen_channel": "#lounge-testing",
     "trigger_text": "ping",
-    "response_message": "pong",
+    "trigger_flags": "i",
+    "response_text": "pong, {{sender}}!",
     "response_channel": "",
     "cooldown_seconds": 5
   }
@@ -66,70 +67,56 @@ The file should contain an array of rule objects. Each rule object defines a tri
 
 *   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
 *   `listen_channel` (string): The channel name (e.g., `#my-project`) where the plugin should listen for triggers.
-*   `trigger_text` (string, optional): The text that must be included in a message to trigger the response. For simple, case-sensitive substring matching.
-*   `trigger_pattern` (string, optional): A regular expression pattern for advanced message matching. If present, `trigger_text` is ignored.
-*   `trigger_flags` (string, optional): Flags for the regular expression (e.g., `"i"` for case-insensitivity).
-*   `response_message` (string): The message that the plugin will send in response. Can contain dynamic variables.
+*   `trigger_text` (string): A regular expression pattern that the plugin will check for in messages. See the section below for more details.
+*   `trigger_flags` (string, optional): Flags for the regular expression. It is recommended to use `"i"` for case-insensitive matching, which is the default for newly created rules.
+*   `response_text` (string): The message that the plugin will send in response. Can contain dynamic variables.
 *   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`.
 *   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
 
-### Advanced Matching & Dynamic Responses
+### Dynamic Rules with Regular Expressions
 
-The plugin supports powerful features to create flexible and dynamic rules.
+All triggers are handled by regular expressions, allowing for powerful and flexible rules.
 
-#### Regular Expression Matching
+#### Simple Text Matching
 
-For more complex matching than simple text inclusion, you can use regular expressions. Use the `trigger_pattern` field to define your regex and `trigger_flags` for options.
+For a simple substring match, just enter the text directly. The plugin will find it anywhere in the message.
 
-**Example:** Match a message that starts with "hello" or "hey", case-insensitively.
+`"trigger_text": "some text"`
 
-```json
-{
-  "server": "MyServer",
-  "listen_channel": "#general",
-  "trigger_pattern": "^(hello|hey)",
-  "trigger_flags": "i",
-  "response_message": "Well hello there!"
-}
-```
+To make it case-insensitive (recommended), add the `"i"` flag:
+
+`"trigger_flags": "i"`
+
+#### Advanced Regular Expressions
+
+For more advanced matching, you can use the full power of regex. For example, to match a message that *starts* with "hello":
+
+`"trigger_text": "^hello"`
+
+*Remember to escape special JSON characters like the backslash `\` (e.g., `"\\s"` for a space character).*
 
 #### Dynamic Variables
 
-You can use variables in both the trigger and the response to make rules context-aware.
+You can use variables in both the trigger and the response:
 
 *   `{{me}}`: Is replaced by the bot's current nickname on the server. Useful for rules that respond to mentions.
-*   `{{sender}}`: Is replaced by the nickname of the user who sent the message. Only available in `response_message`.
-
-**Example:** Respond to a direct mention.
-
-```json
-{
-  "server": "MyServer",
-  "listen_channel": "#general",
-  "trigger_pattern": "^{{me}}[:,]?\\s+ping$",
-  "trigger_flags": "i",
-  "response_message": "pong, {{sender}}!"
-}
-```
-*Note the double backslash `\\s` is required in JSON for a single backslash `\s` (whitespace character) in the regex.*
+*   `{{sender}}`: Is replaced by the nickname of the user who sent the message. Only available in `response_text`.
 
 #### Capture Groups
 
-When using `trigger_pattern`, you can use capturing groups `(...)` in your regex and then reference the captured text in your `response_message` using placeholders like `$1`, `$2`, etc.
+You can use capturing groups `(...)` in your `trigger_text` and reference the captured content in your `response_text` using placeholders like `$1`, `$2`, etc.
 
-**Example:** Create a dynamic response using a capture group.
+**Example:**
 
 ```json
 {
   "server": "MyServer",
   "listen_channel": "#questions",
-  "trigger_pattern": "have you ever heard of (.+)\?",
-  "trigger_flags": "i",
-  "response_message": "Of course I've heard of $1! It's one of my favorite topics."
+  "trigger_text": "have you ever heard of (.+)\\"?,  "trigger_flags": "i",
+  "response_text": "Of course I've heard of $1! It's one of my favorite topics."
 }
 ```
-
-If a user asks `"have you ever heard of Taylor Swift?"`, the bot will capture `"Taylor Swift"` into `$1` and respond: `"Of course I've heard of Taylor Swift! It's one of my favorite topics."`
+If a user asks `"have you ever heard of I Have No Mouth And I Must Scream, by Harlan Ellison?"`, the bot will capture `"Taylor Swift"` into `$1` and respond: `"Of course I've heard of I Have No Mouth And I Must Scream, by Harlan Ellison! It's one of my favorite books, and inspired one of my favorite games."`
 
 ### File location
 
@@ -176,8 +163,7 @@ echo "--- Finished running post-install.sh ---"
 
 Just make sure to `chmod +x` your `post-install.sh` before starting the container.
 Do note that you need to provide a `config.json` file for your container and create a user for it.
-This file is different from the `config/config.json` file that controls parameters for the plugin itself, not TheLounge.
-(*Yes, the naming could be more clear*)
+This file is different from the `config/config.json` file that controls parameters for the plugin itself, not TheLounge. (*Yes, the naming could be clearer*.)
 
 ### Automatic reloading
 

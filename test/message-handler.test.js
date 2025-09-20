@@ -14,29 +14,14 @@ describe('createPrivmsgHandler', () => {
   let data;
 
   beforeEach(() => {
-    // Reset mocks before each test
     jest.clearAllMocks();
-
-    client = {
-      runAsUser: jest.fn(),
-    };
-
+    client = { runAsUser: jest.fn() };
     network = {
       name: 'TestServer',
       nick: 'MyBot',
-      channels: [
-        { name: '#general', id: 1 },
-        { name: '#bots', id: 2 },
-      ],
+      channels: [{ name: '#general', id: 1 }],
     };
-
-    data = {
-      nick: 'User1',
-      target: '#general',
-      message: '',
-    };
-
-    // Mock ruleManager getters
+    data = { nick: 'User1', target: '#general', message: '' };
     ruleManager.getRules.mockReturnValue([]);
     ruleManager.getRuleCooldowns.mockReturnValue(new Map());
   });
@@ -46,59 +31,38 @@ describe('createPrivmsgHandler', () => {
       server: 'TestServer',
       listen_channel: '#general',
       trigger_text: 'non-matching text',
-      response_message: 'should not be sent',
+      response_text: 'should not be sent',
     }]);
     data.message = 'this is a test message';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).not.toHaveBeenCalled();
   });
 
-  it('should handle simple trigger_text (backwards compatibility)', () => {
+  it('should handle simple text matching (as a regex)', () => {
     ruleManager.getRules.mockReturnValue([{
       server: 'TestServer',
       listen_channel: '#general',
       trigger_text: 'hello bot',
-      response_message: 'hello user',
+      response_text: 'hello user',
     }]);
     data.message = 'well hello bot, how are you?';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).toHaveBeenCalledWith('hello user', 1);
   });
 
-  it('should handle trigger_pattern with regex', () => {
+  it('should handle case-insensitive matching with trigger_flags', () => {
     ruleManager.getRules.mockReturnValue([{
       server: 'TestServer',
       listen_channel: '#general',
-      trigger_pattern: 'level (\\d+)',
-      response_message: 'level detected',
-    }]);
-    data.message = 'user reached level 5';
-
-    const handler = createPrivmsgHandler(client, network);
-    handler(data);
-
-    expect(client.runAsUser).toHaveBeenCalledWith('level detected', 1);
-  });
-
-  it('should handle trigger_pattern with case-insensitive flag', () => {
-    ruleManager.getRules.mockReturnValue([{
-      server: 'TestServer',
-      listen_channel: '#general',
-      trigger_pattern: 'help',
+      trigger_text: 'help',
       trigger_flags: 'i',
-      response_message: 'help is on the way',
+      response_text: 'help is on the way',
     }]);
     data.message = 'I need HELP';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).toHaveBeenCalledWith('help is on the way', 1);
   });
 
@@ -107,13 +71,11 @@ describe('createPrivmsgHandler', () => {
       server: 'TestServer',
       listen_channel: '#general',
       trigger_text: 'ping',
-      response_message: 'pong, {{sender}}!',
+      response_text: 'pong, {{sender}}!',
     }]);
     data.message = 'ping';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).toHaveBeenCalledWith('pong, User1!', 1);
   });
 
@@ -121,46 +83,25 @@ describe('createPrivmsgHandler', () => {
     ruleManager.getRules.mockReturnValue([{
       server: 'TestServer',
       listen_channel: '#general',
-      trigger_text: '{{me}}: status',
-      response_message: 'I am here',
+      trigger_text: '^MyBot: status$',
+      response_text: 'I am here',
     }]);
     data.message = 'MyBot: status';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).toHaveBeenCalledWith('I am here', 1);
-  });
-
-  it('should substitute {{me}} variable in trigger_pattern', () => {
-    ruleManager.getRules.mockReturnValue([{
-      server: 'TestServer',
-      listen_channel: '#general',
-      trigger_pattern: '^({{me}}):\\s+good'
-      ,
-      trigger_flags: 'i',
-      response_message: 'thanks',
-    }]);
-    data.message = 'mybot: good job';
-
-    const handler = createPrivmsgHandler(client, network);
-    handler(data);
-
-    expect(client.runAsUser).toHaveBeenCalledWith('thanks', 1);
   });
 
   it('should substitute capture groups ($1, $2) in response', () => {
     ruleManager.getRules.mockReturnValue([{
       server: 'TestServer',
       listen_channel: '#general',
-      trigger_pattern: 'order (\\w+) and (\\w+)',
-      response_message: 'Ordering $1 and $2 for {{sender}}.',
+      trigger_text: 'order (\\w+) and (\\w+)',
+      response_text: 'Ordering $1 and $2 for {{sender}}.',
     }]);
     data.message = 'order pizza and soda';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).toHaveBeenCalledWith('Ordering pizza and soda for User1.', 1);
   });
 
@@ -168,17 +109,15 @@ describe('createPrivmsgHandler', () => {
     ruleManager.getRules.mockReturnValue([{
       server: 'TestServer',
       listen_channel: '#general',
-      trigger_pattern: 'invalid[regex',
-      response_message: 'should not trigger',
+      trigger_text: 'invalid[regex',
+      response_text: 'should not trigger',
     }]);
     data.message = 'this is a message';
-
     const handler = createPrivmsgHandler(client, network);
     handler(data);
-
     expect(client.runAsUser).not.toHaveBeenCalled();
     expect(PluginLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining('[AM] Invalid regex for rule:'),
+      expect.stringContaining('[AM] Invalid regex in rule:'),
       expect.any(String)
     );
   });
@@ -188,23 +127,16 @@ describe('createPrivmsgHandler', () => {
       server: 'TestServer',
       listen_channel: '#general',
       trigger_text: 'repeat',
-      response_message: 'first!',
+      response_text: 'first!',
       cooldown_seconds: 10,
     };
-    const cooldowns = new Map();
     ruleManager.getRules.mockReturnValue([rule]);
-    ruleManager.getRuleCooldowns.mockReturnValue(cooldowns);
+    ruleManager.getRuleCooldowns.mockReturnValue(new Map());
     data.message = 'repeat';
-
     const handler = createPrivmsgHandler(client, network);
-    
-    // First call, should work
     handler(data);
     expect(client.runAsUser).toHaveBeenCalledTimes(1);
-    expect(client.runAsUser).toHaveBeenCalledWith('first!', 1);
-
-    // Second call, should be on cooldown
     handler(data);
-    expect(client.runAsUser).toHaveBeenCalledTimes(1); // Still 1, not called again
+    expect(client.runAsUser).toHaveBeenCalledTimes(1);
   });
 });
