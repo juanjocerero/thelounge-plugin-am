@@ -42,9 +42,9 @@ function createPrivmsgHandler(client, network) {
       let matchResult = null;
 
       // 1. Variable Substitution for the trigger
-      const botNick = network.nick;
-      const triggerPattern = rule.trigger_pattern ? rule.trigger_pattern.replace(/{{me}}/g, botNick) : null;
-      const triggerText = rule.trigger_text ? rule.trigger_text.replace(/{{me}}/g, botNick) : null;
+      const ownNick = network.nick;
+      const triggerPattern = rule.trigger_pattern ? rule.trigger_pattern.replace(/{{me}}/g, ownNick) : null;
+      const triggerText = rule.trigger_text ? rule.trigger_text.replace(/{{me}}/g, ownNick) : null;
 
       // 2. Matching Logic
       if (triggerPattern) {
