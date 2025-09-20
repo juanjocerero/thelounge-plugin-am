@@ -66,10 +66,70 @@ The file should contain an array of rule objects. Each rule object defines a tri
 
 *   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
 *   `listen_channel` (string): The channel name (e.g., `#my-project`) where the plugin should listen for triggers.
-*   `trigger_text` (string): The text that must be included in a message to trigger the response.
-*   `response_message` (string): The message that the plugin will send in response.
+*   `trigger_text` (string, optional): The text that must be included in a message to trigger the response. For simple, case-sensitive substring matching.
+*   `trigger_pattern` (string, optional): A regular expression pattern for advanced message matching. If present, `trigger_text` is ignored.
+*   `trigger_flags` (string, optional): Flags for the regular expression (e.g., `"i"` for case-insensitivity).
+*   `response_message` (string): The message that the plugin will send in response. Can contain dynamic variables.
 *   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`.
 *   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
+
+### Advanced Matching & Dynamic Responses
+
+The plugin supports powerful features to create flexible and dynamic rules.
+
+#### Regular Expression Matching
+
+For more complex matching than simple text inclusion, you can use regular expressions. Use the `trigger_pattern` field to define your regex and `trigger_flags` for options.
+
+**Example:** Match a message that starts with "hello" or "hey", case-insensitively.
+
+```json
+{
+  "server": "MyServer",
+  "listen_channel": "#general",
+  "trigger_pattern": "^(hello|hey)",
+  "trigger_flags": "i",
+  "response_message": "Well hello there!"
+}
+```
+
+#### Dynamic Variables
+
+You can use variables in both the trigger and the response to make rules context-aware.
+
+*   `{{me}}`: Is replaced by the bot's current nickname on the server. Useful for rules that respond to mentions.
+*   `{{sender}}`: Is replaced by the nickname of the user who sent the message. Only available in `response_message`.
+
+**Example:** Respond to a direct mention.
+
+```json
+{
+  "server": "MyServer",
+  "listen_channel": "#general",
+  "trigger_pattern": "^{{me}}[:,]?\\s+ping$",
+  "trigger_flags": "i",
+  "response_message": "pong, {{sender}}!"
+}
+```
+*Note the double backslash `\\s` is required in JSON for a single backslash `\s` (whitespace character) in the regex.*
+
+#### Capture Groups
+
+When using `trigger_pattern`, you can use capturing groups `(...)` in your regex and then reference the captured text in your `response_message` using placeholders like `$1`, `$2`, etc.
+
+**Example:** Create a dynamic response using a capture group.
+
+```json
+{
+  "server": "MyServer",
+  "listen_channel": "#questions",
+  "trigger_pattern": "have you ever heard of (.+)\?",
+  "trigger_flags": "i",
+  "response_message": "Of course I've heard of $1! It's one of my favorite topics."
+}
+```
+
+If a user asks `"have you ever heard of Taylor Swift?"`, the bot will capture `"Taylor Swift"` into `$1` and respond: `"Of course I've heard of Taylor Swift! It's one of my favorite topics."`
 
 ### File location
 
