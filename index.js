@@ -219,6 +219,11 @@ function createPrivmsgHandler(client, network) {
         // Set the cooldown timestamp *before* sending the message
         ruleCooldowns.set(rule, now);
         
+        // This is equivalent to a /say command, since there is no IRC command specified
+        // It could be changed later to account for more possible commands,
+        // and that in turn would need for me to change this variable name
+        // to something that actually reflects that this is a command and not a message.
+        // For now, it can stay as is. 
         const responseMessage = `${rule.response_message}`;
         
         PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
