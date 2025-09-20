@@ -52,7 +52,7 @@ function createPrivmsgHandler(client, network) {
           const regex = new RegExp(triggerPattern, rule.trigger_flags || '');
           matchResult = data.message.match(regex);
         } catch (e) {
-          PluginLogger.error(`[AM] Invalid regex for rule: ${safeJsonStringify(rule)}. Error: ${e.message}`);
+          PluginLogger.error(`[AM] Invalid regex for rule: ${safeJsonStringify(rule)}`, e.message);
           continue; // Skip this rule
         }
       } else if (triggerText) {
@@ -87,12 +87,17 @@ function createPrivmsgHandler(client, network) {
         // 3. Response Generation
         let responseMessage = rule.response_message.replace(/{{sender}}/g, data.nick);
 
-        // Substitute capture groups ($1, $2, ...)
+        // Substitute capture groups ($1, $2, ...) using a single-pass replacer function for robustness.
         if (matchResult.length > 1) {
-          for (let i = 1; i < matchResult.length; i++) {
-            const placeholder = new RegExp(`\\${i}`, 'g');
-            responseMessage = responseMessage.replace(placeholder, matchResult[i]);
-          }
+          responseMessage = responseMessage.replace(/\$(\d)/g, (match, groupNumber) => {
+            const index = parseInt(groupNumber, 10);
+            // Ensure the captured group number is valid and exists in the matchResult array.
+            if (index > 0 && index < matchResult.length && matchResult[index]) {
+              return matchResult[index];
+            }
+            // If the placeholder is invalid (e.g., $99), return the original placeholder text.
+            return match;
+          });
         }
 
         PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${responseMessage}`);
