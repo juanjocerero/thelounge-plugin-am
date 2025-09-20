@@ -1,12 +1,22 @@
 'use strict';
 
-const { createPrivmsgHandler } = require('../src/message-handler');
+const { createPrivmsgHandler, safeJsonStringify } = require('../src/message-handler');
 const ruleManager = require('../src/rule-manager');
 const { PluginLogger } = require('../src/logger');
 
 // Mock dependencies
 jest.mock('../src/rule-manager');
 jest.mock('../src/logger');
+
+describe('safeJsonStringify', () => {
+	it('should handle circular references without crashing', () => {
+	  const obj = {};
+	  obj.a = { b: obj }; // Create a circular reference
+	  const json = safeJsonStringify(obj);
+	  // Check that the output contains the placeholder for circular references
+	  expect(json).toContain('[Circular]');
+	});
+  });
 
 describe('createPrivmsgHandler', () => {
   let client;
@@ -138,5 +148,120 @@ describe('createPrivmsgHandler', () => {
     expect(client.runAsUser).toHaveBeenCalledTimes(1);
     handler(data);
     expect(client.runAsUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('should ignore rules for a different server', () => {
+    ruleManager.getRules.mockReturnValue([{
+      server: 'AnotherServer', // Mismatched server
+      listen_channel: '#general',
+      trigger_text: 'ping',
+      response_text: 'pong',
+    }]);
+    data.message = 'ping';
+    const handler = createPrivmsgHandler(client, network);
+    handler(data);
+    expect(client.runAsUser).not.toHaveBeenCalled();
+  });
+
+  it('should ignore rules for a different channel', () => {
+    ruleManager.getRules.mockReturnValue([{
+      server: 'TestServer',
+      listen_channel: '#other-channel', // Mismatched channel
+      trigger_text: 'ping',
+      response_text: 'pong',
+    }]);
+    data.message = 'ping';
+    const handler = createPrivmsgHandler(client, network);
+    handler(data);
+    expect(client.runAsUser).not.toHaveBeenCalled();
+  });
+
+  it('should send response to a specified response_channel', () => {
+    network.channels.push({ name: '#responses', id: 2 });
+    ruleManager.getRules.mockReturnValue([{
+      server: 'TestServer',
+      listen_channel: '#general',
+      trigger_text: 'question',
+      response_text: 'answer',
+      response_channel: '#responses',
+    }]);
+    data.message = 'question';
+    const handler = createPrivmsgHandler(client, network);
+    handler(data);
+    expect(client.runAsUser).toHaveBeenCalledWith('answer', 2); // Should be sent to channel ID 2
+  });
+
+  it('should log an error if response_channel does not exist', () => {
+    ruleManager.getRules.mockReturnValue([{
+      server: 'TestServer',
+      listen_channel: '#general',
+      trigger_text: 'question',
+      response_text: 'answer',
+      response_channel: '#non-existent-channel',
+    }]);
+    data.message = 'question';
+    const handler = createPrivmsgHandler(client, network);
+    handler(data);
+    expect(client.runAsUser).not.toHaveBeenCalled();
+    expect(PluginLogger.error).toHaveBeenCalledWith(
+      "[AM] Could not find channel '#non-existent-channel' to send response."
+    );
+  });
+
+  it('should use the default cooldown of 5 seconds if not specified', () => {
+    const rule = {
+      server: 'TestServer',
+      listen_channel: '#general',
+      trigger_text: 'repeat',
+      response_text: 'first!',
+      // cooldown_seconds is omitted
+    };
+    ruleManager.getRules.mockReturnValue([rule]);
+    const cooldowns = new Map();
+    ruleManager.getRuleCooldowns.mockReturnValue(cooldowns);
+    data.message = 'repeat';
+    const handler = createPrivmsgHandler(client, network);
+
+    // First call should work
+    handler(data);
+    expect(client.runAsUser).toHaveBeenCalledTimes(1);
+    expect(cooldowns.has(rule)).toBe(true);
+
+    // Second immediate call should be ignored
+    handler(data);
+    expect(client.runAsUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('should only execute the first matching rule', () => {
+    ruleManager.getRules.mockReturnValue([
+      {
+        server: 'TestServer',
+        listen_channel: '#general',
+        trigger_text: 'ping',
+        response_text: 'pong1',
+      },
+      {
+        server: 'TestServer',
+        listen_channel: '#general',
+        trigger_text: 'ping',
+        response_text: 'pong2',
+      },
+    ]);
+    data.message = 'ping all';
+    const handler = createPrivmsgHandler(client, network);
+    handler(data);
+    expect(client.runAsUser).toHaveBeenCalledTimes(1);
+    expect(client.runAsUser).toHaveBeenCalledWith('pong1', 1);
+  });
+
+  it('should not crash if trigger_text or response_text are missing', () => {
+    ruleManager.getRules.mockReturnValue([
+      { server: 'TestServer', listen_channel: '#general', response_text: 'a' }, // Missing trigger
+      { server: 'TestServer', listen_channel: '#general', trigger_text: 'b' },   // Missing response
+    ]);
+    data.message = 'test';
+    const handler = createPrivmsgHandler(client, network);
+    expect(() => handler(data)).not.toThrow();
+    expect(client.runAsUser).not.toHaveBeenCalled();
   });
 });
