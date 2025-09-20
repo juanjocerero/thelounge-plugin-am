@@ -219,10 +219,10 @@ function createPrivmsgHandler(client, network) {
         // Set the cooldown timestamp *before* sending the message
         ruleCooldowns.set(rule, now);
         
-        const command = `${rule.response_message}`;
+        const responseMessage = `${rule.response_message}`;
         
         PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
-        client.runAsUser(command, targetChan.id);
+        client.runAsUser(responseMessage, targetChan.id);
         break; // Stop processing more rules for this message
       }
     }
@@ -237,13 +237,13 @@ function sendHelpMessage(tellUser) {
   tellUser("--- TheLounge Answering Machine Help ---");
   tellUser("Usage: /am <command> [args...]");
   tellUser(" "); // Spacer for readability
-  tellUser("General Commands:");
+  tellUser("General commands:");
   tellUser("  start          - Activates the listener for the current network.");
   tellUser("  stop           - Deactivates the listener for the current network.");
   tellUser("  status         - Shows if the listener is active or inactive for this network.");
   tellUser("  reload         - Manually reloads rules from the rules.json file.");
   tellUser(" ");
-  tellUser("Debugging Commands:");
+  tellUser("Debugging commands:");
   tellUser("  debug status   - Shows if debug mode is currently ENABLED or DISABLED.");
   tellUser("  debug enable   - Enables verbose logging.");
   tellUser("  debug disable  - Disables verbose logging.");
