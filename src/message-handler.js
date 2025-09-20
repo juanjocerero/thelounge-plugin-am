@@ -24,52 +24,80 @@ function safeJsonStringify(obj) {
 */
 function createPrivmsgHandler(client, network) {
   return (data) => {
-    // Fetch fresh rules and cooldowns on every message to ensure they are not stale.
+    // Get a reference to the in-memory rules. This is a fast operation.
+    // The rules are kept fresh by a file watcher in index.js that calls ruleManager.loadRules() on change.
     const rules = ruleManager.getRules();
     const ruleCooldowns = ruleManager.getRuleCooldowns();
 
     PluginLogger.debug(`[AM] Received privmsg on network '${network.name}'. Data: ${safeJsonStringify(data)}`);
-    
+
     for (const rule of rules) {
       const serverMatch = rule.server === network.name;
       const channelMatch = rule.listen_channel.toLowerCase() === data.target.toLowerCase();
-      const textMatch = data.message.includes(rule.trigger_text);
-      
-      if (serverMatch && channelMatch && textMatch) {
+
+      if (!serverMatch || !channelMatch) {
+        continue;
+      }
+
+      let matchResult = null;
+
+      // 1. Variable Substitution for the trigger
+      const botNick = network.nick;
+      const triggerPattern = rule.trigger_pattern ? rule.trigger_pattern.replace(/{{me}}/g, botNick) : null;
+      const triggerText = rule.trigger_text ? rule.trigger_text.replace(/{{me}}/g, botNick) : null;
+
+      // 2. Matching Logic
+      if (triggerPattern) {
+        try {
+          const regex = new RegExp(triggerPattern, rule.trigger_flags || '');
+          matchResult = data.message.match(regex);
+        } catch (e) {
+          PluginLogger.error(`[AM] Invalid regex for rule: ${safeJsonStringify(rule)}. Error: ${e.message}`);
+          continue; // Skip this rule
+        }
+      } else if (triggerText) {
+        if (data.message.includes(triggerText)) {
+          matchResult = [data.message]; // Create a dummy match result for consistency
+        }
+      }
+
+      if (matchResult) {
         PluginLogger.debug(`[AM] Rule triggered by '${data.nick}' in '${data.target}'. Matched rule: ${safeJsonStringify(rule)}`);
-        
+
         const now = Date.now();
         const cooldownSeconds = rule.cooldown_seconds === undefined ? 5 : rule.cooldown_seconds;
         const cooldownMs = cooldownSeconds * 1000;
         const lastExecuted = ruleCooldowns.get(rule);
-        
+
         if (lastExecuted && (now - lastExecuted < cooldownMs)) {
-          PluginLogger.debug(`[AM] Rule for '${rule.trigger_text}' is on cooldown. Skipping.`);
+          PluginLogger.debug(`[AM] Rule for '${rule.trigger_text || rule.trigger_pattern}' is on cooldown. Skipping.`);
           continue;
         }
-        
+
         const responseTarget = rule.response_channel || data.target;
         const targetChan = network.channels.find(c => c.name.toLowerCase() === responseTarget.toLowerCase());
-        
+
         if (!targetChan) {
           PluginLogger.error(`[AM] Could not find channel '${responseTarget}' to send response. Aborting this trigger.`);
           continue;
         }
-        
+
         ruleCooldowns.set(rule, now);
-        
-        /**
-         * The naming of this variable assumes the plugin is always sending messages to public channels.
-         * Since /say is the default command, this works. However, if in the future we add 
-         * the possibility of using other commands, like sending a private message, we should
-         * rewrite this block of code to properly react to those.
-         * Reference documentation: https://en.wikipedia.org/wiki/List_of_IRC_commands
-         */
-        const responseMessage = `${rule.response_message}`;
-        
-        PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${rule.response_message}`);
+
+        // 3. Response Generation
+        let responseMessage = rule.response_message.replace(/{{sender}}/g, data.nick);
+
+        // Substitute capture groups ($1, $2, ...)
+        if (matchResult.length > 1) {
+          for (let i = 1; i < matchResult.length; i++) {
+            const placeholder = new RegExp(`\\${i}`, 'g');
+            responseMessage = responseMessage.replace(placeholder, matchResult[i]);
+          }
+        }
+
+        PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${responseMessage}`);
         client.runAsUser(responseMessage, targetChan.id);
-        break;
+        break; // Stop processing further rules for this message
       }
     }
   };
