@@ -125,6 +125,22 @@ This file is different from the `config/config.json` file that controls paramete
 
 This means you no longer need to manually run `/am reload` after changing the rules, although the command is still available for convenience.
 
+## Code Structure
+
+For those interested in contributing or understanding the plugin's internals, the codebase is organized into several modules within the `src/` directory. This modular approach separates concerns, making the code easier to maintain and extend.
+
+*   `index.js`: The main entry point of the plugin. It is responsible for initializing all other modules, wiring them together, and registering commands and file watchers with TheLounge API. It acts as the central orchestrator.
+
+*   `src/logger.js`: A wrapper around TheLounge's native logger. It provides standard `info` and `error` methods, along with a `debug` method that only prints messages when debug mode is enabled in the plugin's configuration.
+
+*   `src/plugin-config.js`: Manages the plugin's internal configuration file (`config.json`). This file stores settings like the debug mode status. This module handles loading, saving, and providing access to these settings.
+
+*   `src/rule-manager.js`: Responsible for everything related to the user-defined rules (`rules.json`). It handles loading, parsing, and providing access to the rules. In the future, it will also contain the logic for adding, removing, and updating rules via commands.
+
+*   `src/message-handler.js`: Contains the core logic of the plugin. It defines the `privmsg` event handler that checks incoming messages against the rules from the `rule-manager` and decides when to trigger a response. It also manages rule cooldowns.
+
+*   `src/commands.js`: Defines the `/am` command and all its subcommands (`start`, `stop`, `reload`, `debug`, etc.). It acts as the user-facing interface, calling functions from other modules to execute the requested actions.
+
 ## Debugging
 
 The plugin includes a debug mode that provides verbose logging, which can be useful for troubleshooting rules or reporting issues. You can control this mode in real-time using commands.
