@@ -22,6 +22,9 @@
     "bot"
   ],
   "author": "juanjocerero",
-  "repository": "juanjocerero/thelounge-plugin-am",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juanjocerero/thelounge-plugin-am.git"
+  },
   "license": "MIT"
 }
