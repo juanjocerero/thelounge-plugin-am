@@ -14,8 +14,14 @@ module.exports = {
     PluginLogger.init(api.Logger, pluginConfigManager);
     PluginLogger.info('[AM] Plugin loaded.');
 
-    // 2. Determine config paths and initialize managers.
+    // 2. Determine config path and ensure it exists.
     const configDir = path.join(api.Config.getPersistentStorageDir(), 'config');
+    if (!fs.existsSync(configDir)) {
+      PluginLogger.info(`[AM] Creating configuration directory: ${configDir}`);
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    // 3. Initialize managers.
     pluginConfigManager.init(configDir);
     ruleManager.init(configDir);
 
