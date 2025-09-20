@@ -34,6 +34,11 @@ function createPrivmsgHandler(client, network) {
         continue;
       }
 
+      // If a rule has no trigger, it's invalid and should be skipped.
+      if (!rule.trigger_text) {
+        continue;
+      }
+
       // Always treat trigger_text as a regex. First, substitute {{me}} variable.
       const triggerText = (rule.trigger_text || '').replace(/{{me}}/g, network.nick);
 
