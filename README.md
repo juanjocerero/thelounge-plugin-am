@@ -1,8 +1,8 @@
-# TheLounge Answering Machine Plugin
+# TheLounge Answering Machine [AM] Plugin
 
 [![NPM version](https://img.shields.io/npm/v/thelounge-plugin-am.svg)](https://www.npmjs.com/package/thelounge-plugin-am)
 
-A plugin for TheLounge that provides "answering machine" functionality, automatically replying to messages based on a configurable set of rules.
+A plugin for TheLounge that provides "answering machine" (AM) functionality, automatically replying to messages based on a configurable set of rules.
 
 ## Installation
 
@@ -13,6 +13,33 @@ thelounge install thelounge-plugin-am
 ```
 
 After installation, make sure to restart TheLounge for the plugin to be loaded.
+
+## Usage
+
+The plugin provides the `/am` command to control its behavior on a per-network basis.
+
+### Commands
+
+*   `/am start`
+    *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`. You **must** specify the exact name you defined in TheLounge for the Network: for example, not `irc.libera.chat` but `Libera.Chat` if you named it that way.
+
+*   `/am stop`
+    *   Stops the listener for the current IRC network.
+
+*   `/am status`
+    *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
+
+*   `/am reload`
+    *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
+
+*   `/am debug status`
+    *   Shows whether debug mode is currently `ENABLED` or `DISABLED`.
+
+*   `/am debug enable`
+    *   Enables verbose logging and saves the setting.
+
+*   `/am debug disable`
+    *   Disables verbose logging and saves the setting.
 
 ## Configuration
 
@@ -35,7 +62,7 @@ The file should contain an array of rule objects. Each rule object defines a tri
 ]
 ```
 
-### Rule Properties
+### Rule properties
 
 *   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
 *   `listen_channel` (string): The channel name (e.g., `#my-project`) or `PrivateMessages` for private messages (**this function has not been tested sufficiently**, if you try it, post issues) where the plugin should listen for triggers.
@@ -63,7 +90,7 @@ services:
     image: ghcr.io/thelounge/thelounge:latest
     container_name: thelounge
     ports:
-      - "9001:9000"
+      - "9000:9000"
     restart: unless-stopped
     volumes:
       - thelounge:/var/opt/thelounge
@@ -89,6 +116,8 @@ echo "--- Finished running post-install.sh ---"
 
 Just make sure to `chmod +x` your `post-install.sh` before starting the container.
 Do note that you need to provide a `config.json` file for your container and create a user for it.
+This file is different from the `config/config.json` file that controls parameters for the plugin itself, not TheLounge.
+(*Yes, the naming could be more clear*)
 
 ### Automatic reloading
 
@@ -118,34 +147,6 @@ As an alternative, you can also control this feature by manually editing the `co
 }
 ```
 The plugin will automatically detect this change as well.
-
-## Usage
-
-The plugin provides the `/am` command to control its behavior on a per-network basis.
-
-### Commands
-
-*   `/am start`
-    *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`. You **must** specify the exact name you defined in TheLounge for the Network: for example, not `irc.libera.chat` but `Libera.Chat` if you named it that way.
-
-*   `/am stop`
-    *   Stops the listener for the current IRC network.
-
-*   `/am status`
-    *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
-
-*   `/am reload`
-    *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
-
-*   `/am debug status`
-    *   Shows whether debug mode is currently `ENABLED` or `DISABLED`.
-
-*   `/am debug enable`
-    *   Enables verbose logging and saves the setting.
-
-*   `/am debug disable`
-    *   Disables verbose logging and saves the setting.
-
 
 ## License
 
