@@ -58,7 +58,8 @@ The file should contain an array of rule objects. Each rule object defines a tri
     "trigger_flags": "i",
     "response_text": "pong, {{sender}}!",
     "response_channel": "",
-    "cooldown_seconds": 5
+    "cooldown_seconds": 5,
+    "delay_seconds": 10
   }
 ]
 ```
@@ -72,6 +73,7 @@ The file should contain an array of rule objects. Each rule object defines a tri
 *   `response_text` (string): The message that the plugin will send in response. Can contain dynamic variables.
 *   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`.
 *   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
+*   `delay_seconds` (number, optional): The number of seconds the plugin will wait before sending the response after a trigger is matched. This is useful for simulating a more natural, human-like response time. If not specified, it defaults to **0 seconds** (instant response).
 
 ### Dynamic Rules with Regular Expressions
 
