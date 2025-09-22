@@ -93,10 +93,62 @@ function getRuleCooldowns() {
     return ruleCooldowns;
 }
 
+/**
+ * Merges a new set of rules into an existing set.
+ * Rules are identified as unique by the combination of server, listen_channel, and trigger_text.
+ * If a new rule has the same identifier as an existing one, it overwrites it. Otherwise, it's added.
+ * @param {Array<object>} existingRules - The current array of rules.
+ * @param {Array<object>} newRules - The new array of rules to merge.
+ * @returns {{mergedRules: Array<object>, added: number, overwritten: number}}
+ */
+function mergeRules(existingRules, newRules) {
+  let added = 0;
+  let overwritten = 0;
+
+  const createRuleKey = (rule) => `${rule.server}|${rule.listen_channel}|${rule.trigger_text}`;
+
+  const rulesMap = new Map();
+  for (const rule of existingRules) {
+    rulesMap.set(createRuleKey(rule), rule);
+  }
+
+  for (const newRule of newRules) {
+    const key = createRuleKey(newRule);
+    if (rulesMap.has(key)) {
+      overwritten++;
+    } else {
+      added++;
+    }
+    // Add or overwrite the rule in the map.
+    rulesMap.set(key, newRule);
+  }
+
+  const mergedRules = Array.from(rulesMap.values());
+
+  return { mergedRules, added, overwritten };
+}
+
+/**
+ * Saves a given array of rules to the rules.json file.
+ * @param {Array<object>} rulesToSave - The array of rules to write to disk.
+ */
+function saveRules(rulesToSave) {
+  try {
+    PluginLogger.debug(`[AM] Saving ${rulesToSave.length} rules to ${configFilePath}`);
+    const jsonContent = JSON.stringify(rulesToSave, null, 2) + '\n';
+    fs.writeFileSync(configFilePath, jsonContent, 'utf8');
+    PluginLogger.info(`[AM] Successfully saved rules to ${configFilePath}.`);
+  } catch (error) {
+    PluginLogger.error(`[AM] CRITICAL: Failed to save rules to ${configFilePath}.`, error);
+  }
+}
+
 module.exports = {
   init,
   loadRules,
   getRules,
   getRulesPath,
   getRuleCooldowns,
+  mergeRules,
+  saveRules,
 };

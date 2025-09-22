@@ -21,7 +21,7 @@ The plugin provides the `/am` command to control its behavior on a per-network b
 ### Commands
 
 *   `/am start`
-    *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`. You **must** specify the exact name you defined in TheLounge for the Network: for example, not `irc.libera.chat` but `Libera.Chat` if you named it that way.
+    *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`.
 
 *   `/am stop`
     *   Stops the listener for the current IRC network.
@@ -29,17 +29,23 @@ The plugin provides the `/am` command to control its behavior on a per-network b
 *   `/am status`
     *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
 
+*   `/am rules`
+    *   Shows a list of all active rules for the current server. Requires the listener to be active.
+
 *   `/am reload`
     *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
 
-*   `/am debug status`
-    *   Shows whether debug mode is currently `ENABLED` or `DISABLED`.
+*   `/am fetch <URL>`
+    *   Fetches and merges rules from a remote URL. See the "Remote Rules Fetching" section below for important security configuration.
 
-*   `/am debug enable`
-    *   Enables verbose logging and saves the setting.
+*   `/am debug enable|disable|status`
+    *   Controls verbose logging for debugging.
 
-*   `/am debug disable`
-    *   Disables verbose logging and saves the setting.
+*   `/am fetch enable|disable|status`
+    *   Controls the remote rule fetching feature.
+
+*   `/am whitelist ...`
+    *   Manages the domain whitelist for the fetch feature.
 
 ## Configuration
 
@@ -120,6 +126,52 @@ You can use capturing groups `(...)` in your `trigger_text` and reference the ca
 }
 ```
 If a user asks `"have you ever heard of I Have No Mouth And I Must Scream, by Harlan Ellison?"`, the bot will respond: `"Of course I've heard of I Have No Mouth And I Must Scream, by Harlan Ellison! It's one of my favorite books, and inspired one of my favorite games."`
+
+## Remote Rules Fetching (Administration and Security)
+
+This plugin allows administrators to fetch rules from a remote URL and merge them with the existing ruleset. This is useful for managing rules across multiple TheLounge instances or for using community-maintained rule lists.
+
+> **:warning: SECURITY WARNING: Server-Side Request Forgery (SSRF)**
+> Enabling this feature allows TheLounge server to make HTTP requests to external URLs. A malicious actor could potentially use this to probe your internal network. To mitigate this risk, the `fetch` functionality is **disabled by default** and requires two explicit actions to enable:
+> 1. The feature must be globally enabled.
+> 2. You must add trusted domains to a whitelist.
+
+### Configuration Steps
+
+1.  **Enable the Fetch Feature**
+    Run the following command to allow the plugin to fetch remote rules:
+    ```
+    /am fetch enable
+    ```
+
+2.  **Whitelist Trusted Domains**
+    You must specify which domains are safe to fetch rules from. For example, to allow fetching from a GitHub Gist:
+    ```
+    /am whitelist add gist.githubusercontent.com
+    ```
+    Only URLs whose domain is on this list will be accepted.
+
+### Fetch Management Commands
+
+*   `/am fetch enable`: Enables the remote fetching feature.
+*   `/am fetch disable`: Disables the feature.
+*   `/am fetch status`: Shows if the feature is currently enabled or disabled.
+
+### Whitelist Management Commands
+
+*   `/am whitelist add <domain>`: Adds a domain to the list of allowed domains.
+*   `/am whitelist remove <domain>`: Removes a domain from the whitelist.
+*   `/am whitelist list`: Shows all domains currently in the whitelist.
+
+### Rule Merging Logic
+
+When fetching rules from a URL, they are not simply added. They are merged with the existing `rules.json` file with the following logic:
+
+1.  A rule is considered unique based on the combination of its `server`, `listen_channel`, and `trigger_text` properties.
+2.  If a fetched rule has the same unique identifier as an existing rule, the existing rule is **overwritten** by the new one.
+3.  If a fetched rule does not match any existing rule, it is **added** to the list.
+
+This allows you to use the fetch command to both add new rules and update existing ones.
 
 ### File location
 
