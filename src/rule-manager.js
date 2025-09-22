@@ -61,7 +61,8 @@ function ensureConfigFileExists() {
         "trigger_flags": "i",
         "response_text": "pong, {{sender}}!",
         "response_channel": "",
-        "cooldown_seconds": 5
+        "cooldown_seconds": 5,
+        "delay_seconds": 0
       }
     ];
     fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2) + '\n');

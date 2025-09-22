@@ -69,20 +69,33 @@ function createPrivmsgHandler(client, network) {
 
           ruleCooldowns.set(rule, now);
 
-          // Generate response, substituting {{sender}} and capture groups ($1, $2, ...)
-          let responseText = (rule.response_text || '').replace(/{{sender}}/g, data.nick);
-          if (matchResult.length > 1) {
-            responseText = responseText.replace(/\$(\d)/g, (match, groupNumber) => {
-              const index = parseInt(groupNumber, 10);
-              if (index > 0 && index < matchResult.length && matchResult[index]) {
-                return matchResult[index];
-              }
-              return match;
-            });
+          // Prepare response logic
+          const sendResponse = () => {
+            // Generate response, substituting {{sender}} and capture groups ($1, $2, ...)
+            let responseText = (rule.response_text || '').replace(/{{sender}}/g, data.nick);
+            if (matchResult.length > 1) {
+              responseText = responseText.replace(/\$(\d)/g, (match, groupNumber) => {
+                const index = parseInt(groupNumber, 10);
+                if (index > 0 && index < matchResult.length && matchResult[index]) {
+                  return matchResult[index];
+                }
+                return match;
+              });
+            }
+
+            PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${responseText}`);
+            client.runAsUser(responseText, targetChan.id);
+          };
+
+          const delaySeconds = rule.delay_seconds || 0;
+
+          if (delaySeconds > 0) {
+            PluginLogger.debug(`[AM] Delaying response by ${delaySeconds} seconds.`);
+            setTimeout(sendResponse, delaySeconds * 1000);
+          } else {
+            sendResponse();
           }
 
-          PluginLogger.debug(`[AM] Sending response to '${responseTarget}' (ID: ${targetChan.id}): ${responseText}`);
-          client.runAsUser(responseText, targetChan.id);
           break; // Stop processing further rules for this message
         }
       } catch (e) {

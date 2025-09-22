@@ -24,6 +24,7 @@ describe('createPrivmsgHandler', () => {
   let data;
 
   beforeEach(() => {
+    jest.useFakeTimers(); // Use fake timers for all tests in this suite
     jest.clearAllMocks();
     client = { runAsUser: jest.fn() };
     network = {
@@ -34,6 +35,39 @@ describe('createPrivmsgHandler', () => {
     data = { nick: 'User1', target: '#general', message: '' };
     ruleManager.getRules.mockReturnValue([]);
     ruleManager.getRuleCooldowns.mockReturnValue(new Map());
+  });
+
+  afterEach(() => {
+    jest.useRealTimers(); // Restore real timers
+  });
+
+  it('should delay the response according to delay_seconds', () => {
+    const rule = {
+      server: 'TestServer',
+      listen_channel: '#general',
+      trigger_text: 'wait for it',
+      response_text: 'response after 3s',
+      delay_seconds: 3,
+    };
+    ruleManager.getRules.mockReturnValue([rule]);
+    data.message = 'wait for it';
+    jest.spyOn(global, 'setTimeout');
+    const handler = createPrivmsgHandler(client, network);
+
+    handler(data);
+
+    // Check that the response is not sent immediately
+    expect(client.runAsUser).not.toHaveBeenCalled();
+    // Check that setTimeout was called with the correct delay
+    expect(setTimeout).toHaveBeenCalledTimes(1);
+    expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 3000);
+
+    // Advance time by 3 seconds
+    jest.advanceTimersByTime(3000);
+
+    // Now the response should have been sent
+    expect(client.runAsUser).toHaveBeenCalledTimes(1);
+    expect(client.runAsUser).toHaveBeenCalledWith('response after 3s', 1);
   });
 
   it('should not respond if no rules match', () => {
