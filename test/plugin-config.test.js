@@ -33,24 +33,25 @@ describe('Plugin Config Manager', () => {
   describe('init', () => {
     it('should create a default config.json if one does not exist', () => {
       fs.existsSync.mockReturnValue(false);
-      fs.readFileSync.mockReturnValue(JSON.stringify({ debug: false }));
+      fs.readFileSync.mockReturnValue(JSON.stringify({ debug: false, enableFetch: false, fetchWhitelist: [] }));
 
       pluginConfigManager.init(configDir);
 
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         configFilePath,
-        JSON.stringify({ debug: false }, null, 2) + '\n'
+        JSON.stringify({ debug: false, enableFetch: false, fetchWhitelist: [] }, null, 2) + '\n'
       );
     });
 
     it('should load the config from an existing file', () => {
       fs.existsSync.mockReturnValue(true);
-      fs.readFileSync.mockReturnValue(JSON.stringify({ debug: true, other: 'value' }));
+      const mockConfig = { debug: true, enableFetch: true, fetchWhitelist: ['example.com'], other: 'value' };
+      fs.readFileSync.mockReturnValue(JSON.stringify(mockConfig));
 
       pluginConfigManager.init(configDir);
 
       expect(fs.writeFileSync).not.toHaveBeenCalled();
-      expect(pluginConfigManager.getPluginConfig()).toEqual({ debug: true, other: 'value' });
+      expect(pluginConfigManager.getPluginConfig()).toEqual(mockConfig);
     });
   });
 
@@ -62,7 +63,7 @@ describe('Plugin Config Manager', () => {
       pluginConfigManager.init(configDir);
 
       expect(pluginConfigManager.getPluginConfig()).toEqual(mockConfig);
-      expect(PluginLogger.info).toHaveBeenCalledWith(expect.stringContaining('Plugin config successfully loaded. Debug mode is ENABLED'));
+      expect(PluginLogger.info).toHaveBeenCalledWith(expect.stringContaining('Plugin config successfully loaded.'));
     });
 
     it('should use default config on JSON syntax error', () => {
@@ -75,7 +76,7 @@ describe('Plugin Config Manager', () => {
         expect.stringContaining('Failed to parse'),
         expect.any(String)
       );
-      expect(pluginConfigManager.getPluginConfig()).toEqual({ debug: false });
+      expect(pluginConfigManager.getPluginConfig()).toEqual({ debug: false, enableFetch: false, fetchWhitelist: [] });
     });
 
     it('should use default config on file not found error', () => {
@@ -90,7 +91,7 @@ describe('Plugin Config Manager', () => {
         expect.stringContaining('Plugin config file not found'),
         expect.any(String)
       );
-      expect(pluginConfigManager.getPluginConfig()).toEqual({ debug: false });
+      expect(pluginConfigManager.getPluginConfig()).toEqual({ debug: false, enableFetch: false, fetchWhitelist: [] });
     });
   });
 

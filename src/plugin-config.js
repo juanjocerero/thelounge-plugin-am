@@ -4,8 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { PluginLogger } = require('./logger');
 
+const DEFAULT_CONFIG = { debug: false, enableFetch: false, fetchWhitelist: [] };
+
 // Default state
-let pluginConfig = { debug: false };
+let pluginConfig = { ...DEFAULT_CONFIG };
 let pluginConfigPath = '';
 
 /**
@@ -27,7 +29,7 @@ function loadPluginConfig() {
   try {
     const configFile = fs.readFileSync(pluginConfigPath, 'utf8');
     pluginConfig = JSON.parse(configFile);
-    PluginLogger.info(`[AM] Plugin config successfully loaded. Debug mode is ${pluginConfig.debug ? 'ENABLED' : 'DISABLED'}.`);
+    PluginLogger.info(`[AM] Plugin config successfully loaded.`);
   } catch (error) {
     let errMessage = `[AM] ERROR: Could not read plugin config from ${pluginConfigPath}. Using default values.`;
     if (error.code === 'ENOENT') {
@@ -36,6 +38,7 @@ function loadPluginConfig() {
       errMessage = `[AM] ERROR: Failed to parse ${pluginConfigPath}. Please check for JSON syntax errors. Using default values.`;
     }
     PluginLogger.error(errMessage, error.message);
+    pluginConfig = { ...DEFAULT_CONFIG };
   }
 }
 
@@ -58,7 +61,7 @@ function savePluginConfig() {
 function ensurePluginConfigExists() {
   if (!fs.existsSync(pluginConfigPath)) {
     PluginLogger.info(`[AM] Creating default plugin config file: ${pluginConfigPath}`);
-    const defaultConfig = { "debug": false };
+    const defaultConfig = { ...DEFAULT_CONFIG };
     fs.writeFileSync(pluginConfigPath, JSON.stringify(defaultConfig, null, 2) + '\n');
   }
 }

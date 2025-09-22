@@ -110,4 +110,105 @@ describe('Rule Manager', () => {
       expect(tellUser).toHaveBeenCalledWith(expect.stringContaining('ERROR: Configuration file not found'));
     });
   });
+
+  describe('mergeRules', () => {
+    const existingRule1 = { server: 'TestNet', listen_channel: '#a', trigger_text: 'ping', response_text: 'pong1' };
+    const existingRule2 = { server: 'TestNet', listen_channel: '#b', trigger_text: 'hello', response_text: 'world' };
+
+    it('should add new rules that do not exist', () => {
+        const existingRules = [existingRule1];
+        const newRule = existingRule2;
+        const { mergedRules, added, overwritten } = ruleManager.mergeRules(existingRules, [newRule]);
+
+        expect(mergedRules.length).toBe(2);
+        expect(added).toBe(1);
+        expect(overwritten).toBe(0);
+        expect(mergedRules).toContain(existingRule1);
+        expect(mergedRules).toContain(newRule);
+    });
+
+    it('should overwrite an existing rule with the same identifier', () => {
+        const existingRules = [existingRule1, existingRule2];
+        const overwritingRule = { server: 'TestNet', listen_channel: '#a', trigger_text: 'ping', response_text: 'pong2' };
+        const { mergedRules, added, overwritten } = ruleManager.mergeRules(existingRules, [overwritingRule]);
+
+        expect(mergedRules.length).toBe(2);
+        expect(added).toBe(0);
+        expect(overwritten).toBe(1);
+        // Check that the new rule is present and the old one is gone
+        const mergedRule = mergedRules.find(r => r.listen_channel === '#a');
+        expect(mergedRule.response_text).toBe('pong2');
+    });
+
+    it('should handle a mix of adding and overwriting', () => {
+        const existingRules = [existingRule1];
+        const newRules = [
+            { server: 'TestNet', listen_channel: '#a', trigger_text: 'ping', response_text: 'pong2' }, // Overwrite
+            { server: 'OtherNet', listen_channel: '#c', trigger_text: 'test', response_text: '123' } // Add
+        ];
+        const { mergedRules, added, overwritten } = ruleManager.mergeRules(existingRules, newRules);
+
+        expect(mergedRules.length).toBe(2);
+        expect(added).toBe(1);
+        expect(overwritten).toBe(1);
+    });
+
+    it('should add all rules if existing rules array is empty', () => {
+        const newRules = [existingRule1, existingRule2];
+        const { mergedRules, added, overwritten } = ruleManager.mergeRules([], newRules);
+
+        expect(mergedRules.length).toBe(2);
+        expect(added).toBe(2);
+        expect(overwritten).toBe(0);
+    });
+
+    it('should do nothing if new rules array is empty', () => {
+        const existingRules = [existingRule1, existingRule2];
+        const { mergedRules, added, overwritten } = ruleManager.mergeRules(existingRules, []);
+
+        expect(mergedRules.length).toBe(2);
+        expect(added).toBe(0);
+        expect(overwritten).toBe(0);
+        expect(mergedRules).toEqual(existingRules);
+    });
+  });
+
+  describe('saveRules', () => {
+    beforeEach(() => {
+        // We need to ensure the config path is set by calling init first.
+        fs.existsSync.mockReturnValue(true);
+        fs.readFileSync.mockReturnValue('[]');
+        ruleManager.init(configDir);
+    });
+
+    it('should call fs.writeFileSync with the correct path and content', () => {
+        const rulesToSave = [
+            { server: 'TestNet', listen_channel: '#a', trigger_text: 'ping', response_text: 'pong' }
+        ];
+        const expectedJsonString = JSON.stringify(rulesToSave, null, 2) + '\n';
+
+        ruleManager.saveRules(rulesToSave);
+
+        expect(fs.writeFileSync).toHaveBeenCalledWith(
+            rulesFilePath,
+            expectedJsonString,
+            'utf8'
+        );
+        expect(PluginLogger.info).toHaveBeenCalledWith(expect.stringContaining('Successfully saved rules'));
+    });
+
+    it('should log an error if fs.writeFileSync fails', () => {
+        const error = new Error('Disk full');
+        fs.writeFileSync.mockImplementation(() => {
+            throw error;
+        });
+
+        ruleManager.saveRules([]);
+
+        expect(PluginLogger.error).toHaveBeenCalledWith(
+            expect.stringContaining('CRITICAL: Failed to save rules'),
+            error
+        );
+    });
+  });
 });
