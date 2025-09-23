@@ -14,6 +14,21 @@ module.exports = {
     PluginLogger.init(api.Logger, pluginConfigManager);
     PluginLogger.info('[AM] Plugin loaded.');
 
+    // --- DEBUG: Inspecting the API object ---
+    try {
+      const apiKeys = Object.getOwnPropertyNames(api);
+      PluginLogger.info(`[AM DEBUG] API properties: ${apiKeys.join(', ')}`);
+      
+      const apiPrototype = Object.getPrototypeOf(api);
+      if (apiPrototype) {
+        const protoKeys = Object.getOwnPropertyNames(apiPrototype);
+        PluginLogger.info(`[AM DEBUG] API prototype properties: ${protoKeys.join(', ')}`);
+      }
+    } catch (e) {
+      PluginLogger.error('[AM DEBUG] Error inspecting API object:', e);
+    }
+    // --- END DEBUG ---
+
     // 2. Determine config path and ensure it exists.
     const configDir = path.join(api.Config.getPersistentStorageDir(), 'config');
     if (!fs.existsSync(configDir)) {
