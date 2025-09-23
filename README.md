@@ -2,7 +2,25 @@
 
 [![NPM version](https://img.shields.io/npm/v/thelounge-plugin-am.svg)](https://www.npmjs.com/package/thelounge-plugin-am)
 
-A plugin for TheLounge that provides "answering machine" (AM) functionality, automatically replying to messages based on a configurable set of rules.
+A plugin for [TheLounge](https://thelounge.chat/) that provides "answering machine" (AM) functionality, automatically replying to messages based on a configurable set of rules.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Basic Usage (Core Commands)](#basic-usage-core-commands)
+- [Rule Configuration (`rules.json`)](#rule-configuration-rulesjson)
+  - [Rule Properties](#rule-properties)
+  - [Using Regular Expressions](#using-regular-expressions)
+  - [Dynamic Variables & Capture Groups](#dynamic-variables--capture-groups)
+- [Advanced Features](#advanced-features)
+  - [Remote Rule Fetching](#remote-rule-fetching)
+  - [Debugging](#debugging)
+- [Configuration Management](#configuration-management)
+  - [File Location](#file-location)
+  - [Automatic Reloading](#automatic-reloading)
+- [Docker Deployment](#docker-deployment)
+- [Code Structure](#code-structure)
+- [License](#license)
 
 ## Installation
 
@@ -14,47 +32,21 @@ thelounge install thelounge-plugin-am
 
 After installation, make sure to restart TheLounge for the plugin to be loaded.
 
-## Usage
+## Basic Usage (Core Commands)
 
 The plugin provides the `/am` command to control its behavior on a per-network basis.
 
-### Commands
+- `/am start`: Starts the listener for the current IRC network.
+- `/am stop`: Stops the listener for the current IRC network.
+- `/am status`: Shows whether the listener is `ACTIVE` or `INACTIVE`.
+- `/am rules`: Shows a list of all active rules for the current server.
+- `/am reload`: Manually reloads the rules from `rules.json`.
 
-*   `/am start`
-    *   Starts the listener for the current IRC network. It will begin monitoring messages and responding according to the rules in `rules.json`.
+## Rule Configuration (`rules.json`)
 
-*   `/am stop`
-    *   Stops the listener for the current IRC network.
+Configuration is handled via a `rules.json` file that the plugin automatically creates. Rules define a trigger and a corresponding response.
 
-*   `/am status`
-    *   Shows whether the listener is currently `ACTIVE` or `INACTIVE` for the current network.
-
-*   `/am rules`
-    *   Shows a list of all active rules for the current server. Requires the listener to be active.
-
-*   `/am reload`
-    *   Manually reloads the rules from the `rules.json` file. Note: This is generally not needed, as the plugin reloads rules automatically when the file is changed.
-
-*   `/am fetch <URL>`
-    *   Fetches and merges rules from a remote URL. See the "Remote Rules Fetching" section below for important security configuration.
-
-*   `/am debug enable|disable|status`
-    *   Controls verbose logging for debugging.
-
-*   `/am fetch enable|disable|status`
-    *   Controls the remote rule fetching feature.
-
-*   `/am whitelist ...`
-    *   Manages the domain whitelist for the fetch feature.
-
-## Configuration
-
-Configuration is handled via a `rules.json` file that is automatically created by the plugin. If one exists already, it is respected.
-
-### `rules.json` structure
-
-The file should contain an array of rule objects. Each rule object defines a trigger and a corresponding response.
-
+**Example `rules.json`:**
 ```json
 [
   {
@@ -70,123 +62,101 @@ The file should contain an array of rule objects. Each rule object defines a tri
 ]
 ```
 
-### Rule properties
+### Rule Properties
 
-*   `server` (string): The name of the network/server where this rule applies (e.g., "freenode", "MyCustomServer").
-*   `listen_channel` (string): The channel name (e.g., `#my-project`) where the plugin should listen for triggers.
-*   `trigger_text` (string): A regular expression pattern that the plugin will check for in messages. See the section below for more details.
-*   `trigger_flags` (string, optional): Flags for the regular expression. It is recommended to use `"i"` for case-insensitive matching, which is the default for newly created rules.
-*   `response_text` (string): The message that the plugin will send in response. Can contain dynamic variables.
-*   `response_channel` (string, optional): The channel or user to which the response should be sent. If not provided, the response is sent to the `listen_channel`.
-*   `cooldown_seconds` (number, optional): The number of seconds the rule must wait before it can be triggered again. This is useful to prevent flooding. If not specified, it defaults to **5 seconds**.
-*   `delay_seconds` (number, optional): The number of seconds the plugin will wait before sending the response after a trigger is matched. This is useful for simulating a more natural, human-like response time. If not specified, it defaults to **0 seconds** (instant response).
+- `server` (string): The name of the network where this rule applies (e.g., "Libera.Chat").
+- `listen_channel` (string): The channel name where the plugin should listen (e.g., `#my-project`).
+- `trigger_text` (string): A regular expression pattern that triggers the rule.
+- `trigger_flags` (string, optional): Flags for the regular expression (e.g., `"i"` for case-insensitive).
+- `response_text` (string): The message the plugin will send. Can contain dynamic variables.
+- `response_channel` (string, optional): The channel or user to respond to. Defaults to `listen_channel`.
+- `cooldown_seconds` (number, optional): The minimum time in seconds before the rule can be triggered again. **Defaults to 5s**.
+- `delay_seconds` (number, optional): The delay in seconds before sending the response. **Defaults to 0s**.
 
-### Dynamic Rules with Regular Expressions
+### Using Regular Expressions
 
-All triggers are handled by regular expressions, allowing for powerful and flexible rules.
+All triggers are regular expressions, allowing for powerful rules.
 
-#### Simple Text Matching
-
-For a simple substring match, just enter the text directly. The plugin will find it anywhere in the message.
-
-`"trigger_text": "some text"`
-
-To make it case-insensitive (recommended), add the `"i"` flag:
-
-`"trigger_flags": "i"`
-
-#### Advanced Regular Expressions
-
-For more advanced matching, you can use the full power of regex. For example, to match a message that *starts* with "hello":
-
-`"trigger_text": "^hello"`
+- **Simple Match:** To match a substring, just enter the text: `"trigger_text": "some text"`.
+- **Advanced Match:** To match a message that *starts* with "hello": `"trigger_text": "^hello"`.
 
 *Remember to escape special JSON characters like the backslash `\` (e.g., `"\\s"` for a space character).*
 
-#### Dynamic Variables
+### Dynamic Variables & Capture Groups
 
 You can use variables in both the trigger and the response:
 
-*   `{{me}}`: Is replaced by the bot's current nickname on the server. Useful for rules that respond to mentions.
-*   `{{sender}}`: Is replaced by the nickname of the user who sent the message. Only available in `response_text`.
+- `{{me}}`: Is replaced by the bot's current nickname on the server.
+- `{{sender}}`: Is replaced by the nickname of the user who sent the message (only in `response_text`).
 
-#### Capture Groups
-
-You can use capturing groups `(...)` in your `trigger_text` and reference the captured content in your `response_text` using placeholders like `$1`, `$2`, etc.
+You can use capturing groups `(...)` in your `trigger_text` and reference them in `response_text` using `$1`, `$2`, etc.
 
 **Example:**
-
 ```json
 {
-  "server": "MyServer",
-  "listen_channel": "#questions",
-  "trigger_text": "have you ever heard of (.+)\\?",  
+  "trigger_text": "have you ever heard of (.+)\"?",  
   "trigger_flags": "i",
   "response_text": "Of course I've heard of $1! It's one of my favorite topics."
 }
 ```
-If a user asks `"have you ever heard of I Have No Mouth And I Must Scream, by Harlan Ellison?"`, the bot will respond: `"Of course I've heard of I Have No Mouth And I Must Scream, by Harlan Ellison! It's one of my favorite books, and inspired one of my favorite games."`
 
-## Remote Rules Fetching (Administration and Security)
+## Advanced Features
 
-This plugin allows administrators to fetch rules from a remote URL and merge them with the existing ruleset. This is useful for managing rules across multiple TheLounge instances or for using community-maintained rule lists.
+### Remote Rule Fetching
+
+This allows administrators to fetch rules from a remote URL and merge them with the existing ruleset.
 
 > **:warning: SECURITY WARNING: Server-Side Request Forgery (SSRF)**
-> Enabling this feature allows TheLounge server to make HTTP requests to external URLs. A malicious actor could potentially use this to probe your internal network. To mitigate this risk, the `fetch` functionality is **disabled by default** and requires two explicit actions to enable:
-> 1. The feature must be globally enabled.
-> 2. You must add trusted domains to a whitelist.
+> Enabling this feature allows TheLounge server to make HTTP requests to external URLs. A malicious actor could potentially use this to probe your internal network. To mitigate this risk, the `fetch` functionality is **disabled by default**.
 
-### Configuration Steps
+**Configuration Steps:**
 
 1.  **Enable the Fetch Feature**
-    Run the following command to allow the plugin to fetch remote rules:
     ```
     /am fetch enable
     ```
 
 2.  **Whitelist Trusted Domains**
-    You must specify which domains are safe to fetch rules from. For example, to allow fetching from a GitHub Gist:
+    You must specify which domains are safe to fetch rules from.
     ```
     /am whitelist add gist.githubusercontent.com
     ```
-    Only URLs whose domain is on this list will be accepted.
 
-### Fetch Management Commands
+**Management Commands:**
 
-*   `/am fetch enable`: Enables the remote fetching feature.
-*   `/am fetch disable`: Disables the feature.
-*   `/am fetch status`: Shows if the feature is currently enabled or disabled.
+- `/am fetch <enable|disable|status>`: Controls the remote fetching feature.
+- `/am fetch <URL>`: Fetches and merges rules from a URL.
+- `/am whitelist <add|remove|list> [domain]`: Manages the domain whitelist.
 
-### Whitelist Management Commands
+**Merge Logic:** A rule is considered unique based on its `server`, `listen_channel`, and `trigger_text`. If a fetched rule matches an existing one, the existing rule is **overwritten**. If it doesn't match, it is **added**.
 
-*   `/am whitelist add <domain>`: Adds a domain to the list of allowed domains.
-*   `/am whitelist remove <domain>`: Removes a domain from the whitelist.
-*   `/am whitelist list`: Shows all domains currently in the whitelist.
+### Debugging
 
-### Rule Merging Logic
+The plugin includes a debug mode for verbose logging, useful for troubleshooting.
 
-When fetching rules from a URL, they are not simply added. They are merged with the existing `rules.json` file with the following logic:
+- `/am debug enable`: Activates verbose logging.
+- `/am debug disable`: Deactivates verbose logging.
+- `/am debug status`: Shows whether debug mode is currently active.
 
-1.  A rule is considered unique based on the combination of its `server`, `listen_channel`, and `trigger_text` properties.
-2.  If a fetched rule has the same unique identifier as an existing rule, the existing rule is **overwritten** by the new one.
-3.  If a fetched rule does not match any existing rule, it is **added** to the list.
+## Configuration Management
 
-This allows you to use the fetch command to both add new rules and update existing ones.
+### File Location
 
-### File location
+The plugin manages its configuration files (`rules.json` and `config.json`) inside TheLounge's packages directory. The exact location is logged by the plugin on startup.
 
-The plugin manages its configuration in a file located inside TheLounge's persistent storage directory, which is typically:
+- **System-wide install:** `/etc/thelounge/packages/thelounge-plugin-am/config/`
+- **Official Docker image:** `/var/opt/thelounge/packages/thelounge-plugin-am/config/`
 
-*   `/etc/thelounge/packages/thelounge-plugin-answering-machine/config/rules.json` for system-wide installations (e.g., via Debian/Ubuntu packages).
-*   `/var/opt/thelounge/packages/thelounge-plugin-answering-machine/config/rules.json` for the official Docker image.
+### Automatic Reloading
 
-If you look at the logs for the service created by TheLounge you can see the exact location of the file, which the plugin logs for you.
+**The plugin automatically watches for changes to the `rules.json` file.** When you save modifications, the plugin instantly reloads the rules. You no longer need to manually run `/am reload`.
 
-The plugin will create a default empty `rules.json` file on its first run if they don't already exist.
+<details>
+<summary><b>Docker Deployment</b></summary>
 
-### Deploying inside a Docker container
-If you want to use the plugin inside a Docker image, here is a suggested `docker-compose.yml`: 
-```
+If you want to use the plugin inside a Docker image, here is a suggested `docker-compose.yml` to mount a custom `rules.json`.
+
+```yaml
 services:
   thelounge:
     image: ghcr.io/thelounge/thelounge:latest
@@ -202,68 +172,31 @@ services:
 volumes:
   thelounge:
 ```
-This way, you can provide a custom `rules.json` when instancing the container. 
+
 You can use `post-install.sh` to install the plugin:
-```
+```sh
 #!/bin/sh
 export THELOUNGE_HOME=/var/opt/thelounge
-
 echo "--- Running post-install.sh ---"
-echo "Installing thelounge-plugin-am..."
-
 thelounge install thelounge-plugin-am
-
-echo "--- Finished running post-install.sh ---"
 ```
+Make sure to `chmod +x` your `post-install.sh` before starting the container.
 
-Just make sure to `chmod +x` your `post-install.sh` before starting the container.
-Do note that you need to provide a `config.json` file for your container and create a user for it.
-This file is different from the `config/config.json` file that controls parameters for the plugin itself, not TheLounge. (*Yes, the naming could be clearer*.)
+</details>
 
-### Automatic reloading
+<details>
+<summary><b>Code Structure</b></summary>
 
-**The plugin automatically watches for changes to the `rules.json` file.** When you save your modifications to `rules.json`, the plugin will instantly reload the rules in the background. You will see a confirmation message in TheLounge's server logs.
+The codebase is organized into several modules within the `src/` directory.
 
-This means you no longer need to manually run `/am reload` after changing the rules, although the command is still available for convenience.
+- `index.js`: The main entry point of the plugin. It orchestrates the initialization of all other modules.
+- `src/logger.js`: A wrapper around TheLounge's native logger, with support for the debug mode.
+- `src/plugin-config.js`: Manages the plugin's internal configuration file (`config.json`).
+- `src/rule-manager.js`: Handles loading, parsing, and providing access to the rules in `rules.json`.
+- `src/message-handler.js`: Contains the core logic that checks incoming messages against the rules.
+- `src/commands.js`: Defines the `/am` command and all its subcommands.
 
-## Code Structure
-
-For those interested in contributing or understanding the plugin's internals, the codebase is organized into several modules within the `src/` directory. This modular approach separates concerns, making the code easier to maintain and extend.
-
-*   `index.js`: The main entry point of the plugin. It is responsible for initializing all other modules, wiring them together, and registering commands and file watchers with TheLounge API. It acts as the central orchestrator.
-
-*   `src/logger.js`: A wrapper around TheLounge's native logger. It provides standard `info` and `error` methods, along with a `debug` method that only prints messages when debug mode is enabled in the plugin's configuration.
-
-*   `src/plugin-config.js`: Manages the plugin's internal configuration file (`config.json`). This file stores settings like the debug mode status. This module handles loading, saving, and providing access to these settings.
-
-*   `src/rule-manager.js`: Responsible for everything related to the user-defined rules (`rules.json`). It handles loading, parsing, and providing access to the rules. In the future, it will also contain the logic for adding, removing, and updating rules via commands.
-
-*   `src/message-handler.js`: Contains the core logic of the plugin. It defines the `privmsg` event handler that checks incoming messages against the rules from the `rule-manager` and decides when to trigger a response. It also manages rule cooldowns.
-
-*   `src/commands.js`: Defines the `/am` command and all its subcommands (`start`, `stop`, `reload`, `debug`, etc.). It acts as the user-facing interface, calling functions from other modules to execute the requested actions.
-
-## Debugging
-
-The plugin includes a debug mode that provides verbose logging, which can be useful for troubleshooting rules or reporting issues. You can control this mode in real-time using commands.
-
-The recommended way to manage debug mode is with the `/am debug` commands:
-
-*   `/am debug enable`: Activates verbose logging.
-*   `/am debug disable`: Deactivates verbose logging.
-*   `/am debug status`: Shows whether debug mode is currently active.
-
-Changes are automatically saved to `config.json`, so your choice will be remembered after a restart.
-
-### Manual Configuration
-
-As an alternative, you can also control this feature by manually editing the `config.json` file (located in the same directory as `rules.json`). Set the `debug` property to `true` or `false`:
-
-```json
-{
-  "debug": true
-}
-```
-The plugin will automatically detect this change as well.
+</details>
 
 ## License
 
